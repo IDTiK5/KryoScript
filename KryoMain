@@ -1,0 +1,276 @@
+--[[
+	===========================================
+	KRYO VN SCRIPT - Organized & Modular
+	===========================================
+]]
+
+-- ========== CORE SETUP ==========
+local Compkiller = loadstring(game:HttpGet("https://raw.githubusercontent.com/IDTiK5/KryoScript/refs/heads/main/KryoLoader"))();
+local Notifier = Compkiller.newNotify();
+local ConfigManager = Compkiller:ConfigManager({
+	Directory = "Compkiller-UI",
+	Config = "Example-Configs"
+});
+
+Compkiller:Loader("rbxassetid://120245531583106", 1.5).yield();
+
+-- ========== WINDOW CONFIGURATION ==========
+local MenuKey = "LeftAlt";
+local WINDOW_CONFIG = {
+	Name = "Kryo VN",
+	Keybind = "LeftAlt",
+	Logo = "rbxassetid://120245531583106",
+	TextSize = 15,
+	Scale = UDim2.new(0, 470, 0, 450),
+	Position = UDim2.new(0.5, 70, 0.5, 20)
+};
+
+local Window = Compkiller.new(WINDOW_CONFIG);
+
+-- ========== USER SETTINGS TAB ==========
+local function SetupUserSettings()
+	local UserSettings = Window.UserSettings:Create();
+
+	UserSettings:AddDropdown({
+		Name = "Menu Language",
+		Values = {"English","Russian","Chinese"},
+		Default = "English",
+		Callback = print
+	});
+
+	UserSettings:AddDropdown({
+		Name = "Visible Widgets",
+		Values = {"Watermark","Keybinds","Double Tab"},
+		Multi = true,
+		Default = {"Watermark"},
+		Callback = function(f)
+			print(f)
+		end,
+	});
+
+	UserSettings:AddColorPicker({
+		Name = "Menu color",
+		Default = Compkiller.Colors.Highlight,
+		Callback = function(f)
+			Compkiller.Colors.Highlight = f;
+			Compkiller:RefreshCurrentColor();
+		end,
+	});
+
+	UserSettings:AddKeybind({
+		Name = "Menu key",
+		Default = MenuKey,
+		Callback = function(f)
+			MenuKey = f;
+			Window:SetMenuKey(MenuKey)
+		end,
+	});
+end
+
+SetupUserSettings();
+
+-- ========== NOTIFICATION ==========
+Notifier.new({
+	Title = "Notification",
+	Content = "Thank you for use this script!",
+	Duration = 10,
+	Icon = "rbxassetid://120245531583106"
+});
+
+-- ========== WATERMARK SETUP ==========
+local function SetupWatermark()
+	local Watermark = Window:Watermark({
+		Position = UDim2.new(0.6, 0, 0, 5)
+	});
+
+	-- Player Count
+	local PlayerText = Watermark:AddText({
+		Icon = "user",
+		Text = "Player 0",
+	});
+
+	task.spawn(function()
+		while true do task.wait()
+			local playerCount = #game:GetService("Players"):GetPlayers();
+			PlayerText:SetText("Player " .. playerCount);
+		end
+	end);
+
+	-- Date
+	Watermark:AddText({
+		Icon = "clock",
+		Text = Compkiller:GetDate(),
+	});
+
+	-- Time
+	local TimeText = Watermark:AddText({
+		Icon = "timer",
+		Text = "00:00:00",
+	});
+
+	task.spawn(function()
+		while true do task.wait()
+			TimeText:SetText(Compkiller:GetTimeNow());
+		end
+	end);
+
+	-- FPS Counter
+	local FpsText = Watermark:AddText({
+		Icon = "activity",
+		Text = "FPS: 0",
+	});
+
+	task.spawn(function()
+		local lastTime = tick()
+		local frameCount = 0
+		
+		while true do
+			frameCount = frameCount + 1
+			local currentTime = tick()
+			
+			if currentTime - lastTime >= 1 then
+				FpsText:SetText("FPS: " .. frameCount);
+				frameCount = 0
+				lastTime = currentTime
+			end
+			
+			game:GetService("RunService").RenderStepped:Wait()
+		end
+	end);
+end
+
+SetupWatermark();
+
+-- ========== ESP TAB ==========
+local function SetupEspTab()
+	local EspTab = Window:DrawTab({
+		Name = "Esp",
+		Icon = "eye",
+		EnableScrolling = true
+	});
+
+	local EspSection = EspTab:DrawSection({
+		Name = "ESP Settings",
+		Position = 'left'	
+	});
+
+	local EspToggle = EspSection:AddToggle({
+		Name = "Risky Feature",
+		Flag = "Toggle_Example5",
+		Default = false,
+		Risky = true,
+		Callback = print,
+	});
+
+	local Option = EspToggle.Link:AddOption()
+	Option:AddToggle({
+		Risky = true,
+		Name = "Risky Feature",
+		Flag = "Toggle_Example6",
+		Callback = print
+	});
+end
+
+Window:DrawCategory({Name = "Misc"});
+SetupEspTab();
+
+-- ========== SETTINGS TAB ==========
+local function SetupSettingsTab()
+	local SettingTab = Window:DrawTab({
+		Icon = "settings-3",
+		Name = "Settings",
+		Type = "Single",
+		EnableScrolling = true
+	});
+
+	local Settings = SettingTab:DrawSection({
+		Name = "UI Settings",
+	});
+
+	Settings:AddToggle({
+		Name = "Alway Show Frame",
+		Default = false,
+		Callback = function(v)
+			Window.AlwayShowTab = v;
+		end,
+	});
+
+	-- Color Pickers
+	local ColorOptions = {
+		{Name = "Highlight", Key = "Highlight"},
+		{Name = "Toggle Color", Key = "Toggle"},
+		{Name = "Drop Color", Key = "DropColor"},
+		{Name = "Risky", Key = "Risky"},
+		{Name = "Mouse Enter", Key = "MouseEnter"},
+		{Name = "Block Color", Key = "BlockColor"},
+		{Name = "Background Color", Key = "BGDBColor"},
+		{Name = "Block Background Color", Key = "BlockBackground"},
+		{Name = "Stroke Color", Key = "StrokeColor"},
+		{Name = "High Stroke Color", Key = "HighStrokeColor"},
+		{Name = "Switch Color", Key = "SwitchColor"},
+		{Name = "Line Color", Key = "LineColor"},
+	};
+
+	for _, colorOption in ipairs(ColorOptions) do
+		Settings:AddColorPicker({
+			Name = colorOption.Name,
+			Default = Compkiller.Colors[colorOption.Key],
+			Callback = function(v)
+				Compkiller.Colors[colorOption.Key] = v;
+				Compkiller:RefreshCurrentColor(v);
+			end,
+		});
+	end
+
+	Settings:AddButton({
+		Name = "Get Theme",
+		Callback = function()
+			print(Compkiller:GetTheme())
+			Notifier.new({
+				Title = "Notification",
+				Content = "Copied Them Color to your clipboard",
+				Duration = 5,
+				Icon = "rbxassetid://120245531583106"
+			});
+		end,
+	});
+end
+
+SetupSettingsTab();
+
+-- ========== THEMES TAB ==========
+local function SetupThemesTab()
+	local ThemeTab = Window:DrawTab({
+		Icon = "paintbrush",
+		Name = "Themes",
+		Type = "Single"
+	});
+
+	ThemeTab:DrawSection({
+		Name = "UI Themes"
+	}):AddDropdown({
+		Name = "Select Theme",
+		Default = "Default",
+		Values = {
+			"Default",
+			"Dark Green",
+			"Dark Blue",
+			"Purple Rose",
+			"Skeet"
+		},
+		Callback = function(v)
+			Compkiller:SetTheme(v)
+		end,
+	});
+end
+
+SetupThemesTab();
+
+-- ========== CONFIG TAB ==========
+local ConfigUI = Window:DrawConfig({
+	Name = "Config",
+	Icon = "folder",
+	Config = ConfigManager
+});
+
+ConfigUI:Init();
