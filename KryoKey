@@ -1,0 +1,3 @@
+local Manager = loadstring(game:HttpGet("https://raw.githubusercontent.com/IDTiK5/KryoScript/refs/heads/main/LoaderManager.luau"))();
+
+Manager("https://api.luarmor.net/files/v3/loaders/fa807cf60ed10c3e0e43f0acd8e7b6d5.lua");
