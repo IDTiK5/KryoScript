@@ -3,7 +3,6 @@
     Arceney.cc bởi 4lpaca
 ]]
 
-local loader_cache = "ARCENEY_LOADER_CACHE";
 local loader_cache = "KRYOFREE_LOADER_CACHE";
 
 local Loader = (isfile(loader_cache) and loadstring(readfile(loader_cache))());
@@ -47,18 +46,6 @@ return function(MainLoader , SecondLoader , SupportedExternal)
         makefolder("KryoFree-Cache");
 
         LoaderWindow:AddLabel("Tạo thư mục \"KryoFree-Cache\"","Thành công");
-    end;
-
-    if not isfolder("Arceney-bin") then
-        makefolder("Arceney-bin");
-
-        LoaderWindow:AddLabel("Tạo thư mục \"Arceney-bin\"","Thành công");
-    end;
-
-    if not isfolder("Arceney-Cache") then
-        makefolder("Arceney-Cache");
-
-        LoaderWindow:AddLabel("Tạo thư mục \"Arceney-Cache\"","Thành công");
     end;
 
     local InternalTest = function()
