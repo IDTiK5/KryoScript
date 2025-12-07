@@ -1245,7 +1245,7 @@ function Loader.new(LoaderContent: string , TitleContent: string)
 		TextBox.ZIndex = 17
 		TextBox.ClearTextOnFocus = false
 		TextBox.Font = Enum.Font.GothamBold
-		TextBox.PlaceholderText = "Khóa cấp phép"
+		TextBox.PlaceholderText = "License Key"
 		TextBox.Text = "";
 		
 		TextBox.TextColor3 = Color3.fromRGB(255, 255, 255)
