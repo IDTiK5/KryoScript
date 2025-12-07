@@ -219,13 +219,9 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
     task.delay(1.5,LoaderWindow.Close);
 
-    if _G.OnKeyVerified then
-    _G.OnKeyVerified()
-else
     loadstring(game:HttpGet(LoaderLink))({
         script_key = getgenv().script_key
     });
-end
 
     return true;
 end;
