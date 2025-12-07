@@ -85,7 +85,7 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
     task.wait(1);
 
-    local sdk_api = loadstring(game:HttpGet("https://raw.githubusercontent.com/IDTiK5/KryoScript/refs/heads/main/KryoLoader"))();
+    local sdk_api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))();
     local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
     local ScriptId = string.match(LoaderLink, "https://api.luarmor.net/files/v3/loaders/(%w+).lua");
 
@@ -219,9 +219,13 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
     task.delay(1.5,LoaderWindow.Close);
 
+    if _G.OnKeyVerified then
+    _G.OnKeyVerified()
+else
     loadstring(game:HttpGet(LoaderLink))({
         script_key = getgenv().script_key
     });
+end
 
     return true;
 end;
