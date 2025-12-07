@@ -3,12 +3,12 @@
     Arceney.cc bởi 4lpaca
 ]]
 
-local loader_cache = "KRYOFREE_LOADER_CACHE";
+local loader_cache = "ARCENEY_LOADER_CACHE";
 
 local Loader = (isfile(loader_cache) and loadstring(readfile(loader_cache))());
 
 if not isfile(loader_cache) or not Loader then
-    local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/KryoFree/refs/heads/main/interface/loader.luau");
+    local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");
 
     writefile(loader_cache , src);
 
@@ -25,27 +25,27 @@ getcustomasset = getcustomasset or getsynasset;
 getgenv = getgenv or getfenv;
 
 return function(MainLoader , SecondLoader , SupportedExternal)
-    local LoaderWindow = Loader.new("KRYOFREE","LOADER");
-    local LicenseKeyCache = "KryoFree.license";
+    local LoaderWindow = Loader.new("ARCENEY.CC","LOADER");
+    local LicenseKeyCache = "Arceney.license";
 
     LoaderWindow:AddLabel("Đang khởi tạo","Thành công");
 
-    if not isfolder("KryoFree") then
-        makefolder("KryoFree");
+    if not isfolder("Arceney.cc") then
+        makefolder("Arceney.cc");
 
-        LoaderWindow:AddLabel("Tạo thư mục \"KryoFree\"","Thành công");
+        LoaderWindow:AddLabel("Tạo thư mục \"Arceney.cc\"","Thành công");
     end;
 
-    if not isfolder("KryoFree-bin") then
-        makefolder("KryoFree-bin");
+    if not isfolder("Arceney-bin") then
+        makefolder("Arceney-bin");
 
-        LoaderWindow:AddLabel("Tạo thư mục \"KryoFree-bin\"","Thành công");
+        LoaderWindow:AddLabel("Tạo thư mục \"Arceney-bin\"","Thành công");
     end;
 
-    if not isfolder("KryoFree-Cache") then
-        makefolder("KryoFree-Cache");
+    if not isfolder("Arceney-Cache") then
+        makefolder("Arceney-Cache");
 
-        LoaderWindow:AddLabel("Tạo thư mục \"KryoFree-Cache\"","Thành công");
+        LoaderWindow:AddLabel("Tạo thư mục \"Arceney-Cache\"","Thành công");
     end;
 
     local InternalTest = function()
