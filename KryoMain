@@ -137,6 +137,28 @@ local function SetupWatermark()
 			game:GetService("RunService").RenderStepped:Wait()
 		end
 	end);
+
+	-- Key Expiry Time
+	local KeyText = Watermark:AddText({
+		Icon = "key",
+		Text = "Key: Loading...",
+	});
+
+	task.spawn(function()
+		while true do task.wait(1)
+			-- Lấy key từ global
+			local currentKey = getgenv().script_key or script_key or "Unknown";
+			
+			-- Hiển thị key (có thể format lại)
+			if currentKey and currentKey ~= "Unknown" then
+				-- Hiển thị 8 ký tự cuối của key
+				local keyDisplay = string.sub(tostring(currentKey), -8);
+				KeyText:SetText("Key: ****" .. keyDisplay);
+			else
+				KeyText:SetText("Key: Not Loaded");
+			end
+		end
+	end);
 end
 
 SetupWatermark();
