@@ -215,13 +215,14 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
     task.wait(0.5);
 
-    LoaderWindow:AddLabel("Đang tải script ...","Thành công");
+LoaderWindow:AddLabel("Đang tải script ...","Thành công");
 
-    task.delay(1.5,LoaderWindow.Close);
+task.delay(1.5,LoaderWindow.Close);
 
-    loadstring(game:HttpGet(LoaderLink))({
-        script_key = getgenv().script_key
-    });
+-- Bỏ dòng load Fatality UI
+-- loadstring(game:HttpGet(LoaderLink))({
+--     script_key = getgenv().script_key
+-- });
 
-    return true;
+return true;
 end;
