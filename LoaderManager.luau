@@ -25,7 +25,7 @@ getcustomasset = getcustomasset or getsynasset;
 getgenv = getgenv or getfenv;
 
 return function(MainLoader , SecondLoader , SupportedExternal)
-    local LoaderWindow = Loader.new("ARCENEY.CC","LOADER");
+    local LoaderWindow = Loader.new("KryoFree","LOADER");
     local LicenseKeyCache = "Arceney.license";
 
     LoaderWindow:AddLabel("Đang khởi tạo","Thành công");
