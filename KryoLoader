@@ -15,6 +15,164 @@
 
 --- Export Types ---
 
+-- Language System for Compkiller UI
+local LanguageSystem = {}
+
+-- Define all language strings
+LanguageSystem.Languages = {
+	["Tiếng Anh"] = {
+		-- User Settings
+		languageLabel = "Menu Language",
+		widgetLabel = "Visible Widgets",
+		menuColorLabel = "Menu Color",
+		menuKeyLabel = "Menu Key",
+		
+		-- Widgets
+		watermark = "Watermark",
+		keybinds = "Keybinds",
+		doubleTab = "Double Tab",
+		
+		-- Sections
+		sectionGeneral = "General",
+		sectionDisplay = "Display",
+		sectionHotkeys = "Hotkeys",
+		
+		-- Buttons
+		buttonSave = "Save",
+		buttonLoad = "Load",
+		buttonReset = "Reset",
+		buttonApply = "Apply",
+		
+		-- Messages
+		msgConfigSaved = "Config Saved",
+		msgConfigLoaded = "Config Loaded",
+		msgLanguageChanged = "Language Changed",
+		
+		-- Other texts
+		notifyTitle = "Notification",
+		configListText = "Config List",
+		addConfigText = "Add Config",
+	},
+	
+	["Tiếng Việt"] = {
+		-- User Settings
+		languageLabel = "Ngôn ngữ Menu",
+		widgetLabel = "Widget Hiển thị",
+		menuColorLabel = "Màu Menu",
+		menuKeyLabel = "Phím Menu",
+		
+		-- Widgets
+		watermark = "Dấu mờ",
+		keybinds = "Phím tắt",
+		doubleTab = "Nhấn đúp",
+		
+		-- Sections
+		sectionGeneral = "Chung",
+		sectionDisplay = "Hiển thị",
+		sectionHotkeys = "Phím tắt",
+		
+		-- Buttons
+		buttonSave = "Lưu",
+		buttonLoad = "Tải",
+		buttonReset = "Đặt lại",
+		buttonApply = "Áp dụng",
+		
+		-- Messages
+		msgConfigSaved = "Config đã lưu",
+		msgConfigLoaded = "Config đã tải",
+		msgLanguageChanged = "Ngôn ngữ đã thay đổi",
+		
+		-- Other texts
+		notifyTitle = "Thông báo",
+		configListText = "Danh sách Config",
+		addConfigText = "Thêm Config",
+	},
+	
+	["Tiếng Trung"] = {
+		-- User Settings
+		languageLabel = "菜单语言",
+		widgetLabel = "可见小部件",
+		menuColorLabel = "菜单颜色",
+		menuKeyLabel = "菜单键",
+		
+		-- Widgets
+		watermark = "水印",
+		keybinds = "快捷键",
+		doubleTab = "双击",
+		
+		-- Sections
+		sectionGeneral = "常规",
+		sectionDisplay = "显示",
+		sectionHotkeys = "快捷键",
+		
+		-- Buttons
+		buttonSave = "保存",
+		buttonLoad = "加载",
+		buttonReset = "重置",
+		buttonApply = "应用",
+		
+		-- Messages
+		msgConfigSaved = "配置已保存",
+		msgConfigLoaded = "配置已加载",
+		msgLanguageChanged = "语言已更改",
+		
+		-- Other texts
+		notifyTitle = "通知",
+		configListText = "配置列表",
+		addConfigText = "添加配置",
+	}
+}
+
+-- Current language
+LanguageSystem.currentLanguage = "Tiếng Anh"
+
+-- Subscribers for language changes
+LanguageSystem.subscribers = {}
+
+-- Get text by key
+function LanguageSystem:GetText(key)
+	local languageTable = self.Languages[self.currentLanguage]
+	return languageTable[key] or key
+end
+
+-- Change language
+function LanguageSystem:SetLanguage(newLanguage)
+	if self.Languages[newLanguage] then
+		self.currentLanguage = newLanguage
+		self:NotifySubscribers()
+		return true
+	end
+	return false
+end
+
+-- Subscribe to language changes
+function LanguageSystem:Subscribe(callback)
+	table.insert(self.subscribers, callback)
+end
+
+-- Notify all subscribers about language change
+function LanguageSystem:NotifySubscribers()
+	for _, callback in ipairs(self.subscribers) do
+		callback(self.currentLanguage)
+	end
+end
+
+-- Update UI elements when language changes
+function LanguageSystem:UpdateElement(element, textKey)
+	if element and element.Text then
+		element.Text = self:GetText(textKey)
+	end
+end
+
+-- Batch update multiple elements
+function LanguageSystem:UpdateElements(elements)
+	for element, textKey in pairs(elements) do
+		self:UpdateElement(element, textKey)
+	end
+end
+
+return LanguageSystem
+
 export type cloneref = (target: Instance) -> Instance;
 
 export type Window = {
