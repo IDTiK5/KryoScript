@@ -15,10 +15,14 @@
 
 --- Export Types ---
 
--- Language System for Compkiller UI
+-- ============================================
+-- LANGUAGE SYSTEM - ĐỊNH NGHĨA
+-- DÁN CODE NÀY VÀO ĐẦU FILE TRƯỚC TIÊN
+-- ============================================
+
 local LanguageSystem = {}
 
--- Define all language strings
+-- Định nghĩa tất cả các ngôn ngữ
 LanguageSystem.Languages = {
 	["Tiếng Anh"] = {
 		-- User Settings
@@ -123,54 +127,80 @@ LanguageSystem.Languages = {
 	}
 }
 
--- Current language
+-- Ngôn ngữ hiện tại (mặc định: Tiếng Anh)
 LanguageSystem.currentLanguage = "Tiếng Anh"
 
--- Subscribers for language changes
+-- Danh sách các subscribers (hàm callback)
 LanguageSystem.subscribers = {}
 
--- Get text by key
+-- ✅ FUNCTION 1: Lấy text theo key
 function LanguageSystem:GetText(key)
+	if not key then return "" end
+	
 	local languageTable = self.Languages[self.currentLanguage]
+	if not languageTable then
+		print("⚠️ Ngôn ngữ không tồn tại: " .. self.currentLanguage)
+		return key
+	end
+	
 	return languageTable[key] or key
 end
 
--- Change language
+-- ✅ FUNCTION 2: Thay đổi ngôn ngữ
 function LanguageSystem:SetLanguage(newLanguage)
+	if not newLanguage then return false end
+	
 	if self.Languages[newLanguage] then
 		self.currentLanguage = newLanguage
+		print("🌐 Ngôn ngữ đã thay đổi: " .. newLanguage)
+		
+		-- Thông báo cho tất cả subscribers
 		self:NotifySubscribers()
 		return true
+	else
+		print("⚠️ Ngôn ngữ không được hỗ trợ: " .. newLanguage)
+		return false
 	end
-	return false
 end
 
--- Subscribe to language changes
+-- ✅ FUNCTION 3: Đăng ký nhận thông báo khi ngôn ngữ thay đổi
 function LanguageSystem:Subscribe(callback)
-	table.insert(self.subscribers, callback)
-end
-
--- Notify all subscribers about language change
-function LanguageSystem:NotifySubscribers()
-	for _, callback in ipairs(self.subscribers) do
-		callback(self.currentLanguage)
+	if type(callback) == "function" then
+		table.insert(self.subscribers, callback)
+		print("✓ Đã đăng ký subscriber")
 	end
 end
 
--- Update UI elements when language changes
+-- ✅ FUNCTION 4: Thông báo cho tất cả subscribers
+function LanguageSystem:NotifySubscribers()
+	for i, callback in ipairs(self.subscribers) do
+		pcall(function()
+			callback(self.currentLanguage)
+		end)
+	end
+end
+
+-- ✅ FUNCTION 5: Cập nhật text của một element
 function LanguageSystem:UpdateElement(element, textKey)
 	if element and element.Text then
 		element.Text = self:GetText(textKey)
 	end
 end
 
--- Batch update multiple elements
+-- ✅ FUNCTION 6: Cập nhật nhiều elements cùng lúc
 function LanguageSystem:UpdateElements(elements)
 	for element, textKey in pairs(elements) do
 		self:UpdateElement(element, textKey)
 	end
 end
 
+-- In thông tin
+print("\n=== LANGUAGE SYSTEM LOADED ===")
+print("Current Language: " .. LanguageSystem.currentLanguage)
+print("Supported: Tiếng Anh, Tiếng Việt, Tiếng Trung")
+print("===============================\n")
+
+-- ✅ RETURN cho phép require
 return LanguageSystem
 
 export type cloneref = (target: Instance) -> Instance;
