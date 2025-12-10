@@ -47,7 +47,7 @@ local EspState = {
 	poolSize = 0,
 }
 
--- Hàm LERP cho Vector2
+-- [Logic Game và Drawing (Giữ nguyên)]
 local function vector2Lerp(a, b, t)
     return a + (b - a) * t
 end
@@ -475,10 +475,7 @@ local function refreshAllBoxes()
 	updateAllPlayers()
 end
 
--- ==========================================================
--- CONNECTORS
--- ==========================================================
-
+-- [Connectors (Giữ nguyên)]
 RunService.RenderStepped:Connect(function()
 	if EspState.config.enabled then
         if EspState.config.colorMode == "Rainbow" then
@@ -508,253 +505,258 @@ Players.PlayerRemoving:Connect(removePlayerBox)
 
 -- ========== PHẦN CODE UI (SẮP XẾP LẠI VÀ RÚT GỌN) ==========
 
--- Kiểm tra cả Compkiller (thư viện gốc) và các Sections UI
-if Compkiller and EspSection and BoxSettingsSection then
-	
-	local EspToggle = EspSection:AddToggle({
-		Name = "Box ESP",
-		Flag = "Toggle_BoxESP",
-		Default = false,
-		Risky = false,
-		Callback = function(value)
-			EspState.config.enabled = value
-		end
-	})
-
-	-- ========== OPTION 1: CƠ BẢN VÀ MÀU SẮC ==========
-	local BaseOption = EspToggle.Link:AddOption()
-
-	BaseOption:AddDropdown({
-		Name = "Box Mode",
-		Default = "2D Full",
-		Flag = "Dropdown_BoxMode",
-		Values = {"2D Full", "2D Corner", "3D"},
-		Callback = function(value)
-			EspState.config.boxMode = value
-			refreshAllBoxes() 
-		end
-	})
-
-	BaseOption:AddDropdown({
-		Name = "Color Mode",
-		Default = "Static",
-		Flag = "Dropdown_ColorMode",
-		Values = {"Static", "Team", "Health", "Rainbow"},
-		Callback = function(value)
-			EspState.config.colorMode = value
-		end
-	})
-	
-	BaseOption:AddColorPicker({
-		Name = "Static Box Color",
-		Default = Color3.fromRGB(255, 255, 235),
-		Flag = "Color_Picker_StaticBoxESP",
-		Callback = function(value)
-			EspState.config.baseColor = value 
-			if EspState.config.colorMode == "Static" then
-				EspState.config.boxColor = value 
-			end
-		end
-	})
-
-	BaseOption:AddSlider({
-		Name = "Rainbow Speed",
-		Min = 0,
-		Max = 10, 
-		Default = 1,
-		Round = 1, 
-		Flag = "Slider_RainbowSpeed",
-		Callback = function(value)
-			EspState.config.rainbowSpeed = value
-		end
-	})
-	
-	BaseOption:AddToggle({
-		Risky = false,
-		Name = "Outline (Stroke)", 
-		Flag = "Toggle_Outline",
-		Callback = function(value)
-			EspState.config.outline = value
-			refreshAllBoxes() 
-		end
-	})
-	
-	BaseOption:AddSlider({
-		Name = "Transparency",
-		Min = 0,
-		Max = 1,
-		Default = 0.8,
-		Round = 2,
-		Flag = "Slider_Transparency",
-		Callback = function(value)
-			EspState.config.transparency = value
-		end
-	})
-	
-	-- ========== TÙY CHỈNH CHUNG ==========
-	
-	BoxSettingsSection:AddSlider({
-		Name = "Max Distance",
-		Min = 0,
-		Max = 50000,
-		Default = 500,
-		Round = 0,
-		Flag = "Slider_MaxDistance",
-		Callback = function(value)
-			EspState.config.maxDistance = value
-		end
-	})
-	
-	BoxSettingsSection:AddParagraph({
-		Title = "Tối ưu và Bypass",
-		Content = "Thiết lập hiệu suất, làm mượt (LERP) và các tính năng Anti-Cheat Bypass (Jitter, Raycast)."
-	})
-
-	local AdvancedToggle = BoxSettingsSection:AddToggle({
-		Default = true,
-		Risky = true,
-		Name = "Advanced Settings",
-		Flag = "Toggle_AdvancedSettings",
-		Callback = function() end 
-	})
-
-	-- ========== OPTION 2: TỐI ƯU HÓA (Performance) ==========
-	local PerformanceOption = AdvancedToggle.Link:AddOption({
-		Name = "Performance",
-		Default = true,
-	})
-
-	PerformanceOption:AddToggle({
-		Default = true,
-		Risky = true,
-		Name = "Async Update (CPU Save)",
-		Flag = "Toggle_AsyncUpdate",
-		Callback = function(value)
-			EspState.config.asyncUpdate = value
-		end
-	})
-	
-	PerformanceOption:AddToggle({
-		Risky = false,
-		Name = "FOV Culling (Tối ưu)",
-		Flag = "Toggle_FovCulling",
-		Default = true,
-		Callback = function(value)
-			EspState.config.fovCulling = value
-		end
-	})
-
-	PerformanceOption:AddDropdown({
-		Name = "Pool Management",
-		Default = "Dynamic",
-		Flag = "Dropdown_PoolMode",
-		Values = {"Dynamic", "Fixed"},
-		Callback = function(value)
-			EspState.config.poolMode = value
-		end
-	})
-
-	PerformanceOption:AddSlider({
-		Name = "Fixed Pool Size (Nếu Fixed)",
-		Min = 100,
-		Max = 5000, 
-		Default = 1500,
-		Round = 0,
-		Flag = "Slider_FixedPoolSize",
-		Callback = function(value)
-			EspState.config.fixedPoolSize = value
-		end
-	})
-	
-	-- ========== OPTION 3: BYPASS & MƯỢT (Smoothing & AC Bypass) ==========
-	local BypassOption = AdvancedToggle.Link:AddOption({
-		Name = "Smoothing & Bypass",
-		Default = false,
-	})
-
-	-- LERP Smoothing
-	BypassOption:AddToggle({
-		Risky = false,
-		Name = "Lerp Smoothing (Làm Mượt)",
-		Flag = "Toggle_LerpSmoothing",
-		Default = true,
-		Callback = function(value)
-			EspState.config.lerpSmoothing = value
-		end
-	})
-	
-	BypassOption:AddSlider({
-		Name = "Lerp Factor (Hệ số Mượt)",
-		Min = 0.05,
-		Max = 0.5,
-		Default = 0.15,
-		Round = 2,
-		Flag = "Slider_LerpFactor",
-		Callback = function(value)
-			EspState.config.lerpFactor = value
-		end
-	})
-
-	-- Jitter/Flicker
-	BypassOption:AddToggle({
-		Risky = true,
-		Name = "Jitter/Flicker (AC Bypass)", 
-		Flag = "Toggle_Jitter",
-		Callback = function(value)
-			EspState.config.jitterEnabled = value
-		end
-	})
-
-	BypassOption:AddSlider({
-		Name = "Jitter Intensity (px)",
-		Min = 0.1,
-		Max = 5, 
-		Default = 1,
-		Round = 1, 
-		Flag = "Slider_JitterIntensity",
-		Callback = function(value)
-			EspState.config.jitterIntensity = value
-		end
-	})
-	
-	-- Raycast
-	BypassOption:AddToggle({
-		Risky = false,
-		Name = "Raycast Check (Che khuất)",
-		Flag = "Toggle_RaycastCheck",
-		Callback = function(value)
-			EspState.config.raycastCheck = value
-		end
-	})
-
-	BypassOption:AddToggle({
-		Risky = false,
-		Name = "Fade When Blocked",
-		Flag = "Toggle_FadeBlocked",
-		Callback = function(value)
-			EspState.config.fadeWhenBlocked = value
-		end
-	})
-	
-	-- Team Filter Mode
-	BypassOption:AddToggle({
-		Risky = false,
-		Name = "Team Filter",
-		Flag = "Toggle_TeamFilter",
-		Callback = function(value)
-			EspState.config.teamFilter = value
-		end
-	})
-	
-	BypassOption:AddDropdown({
-		Name = "Team Filter Mode",
-		Default = "Standard",
-		Flag = "Dropdown_TeamFilterMode",
-		Values = {"Standard", "Custom"},
-		Callback = function(value)
-			EspState.config.teamFilterMode = value == "Standard" and "standard" or "custom"
-		end
-	})
-
-end -- Kết thúc bọc hàm UI
+-- KIỂM TRA BÁO LỖI NẾU BIẾN UI BỊ THIẾU
+if not Compkiller or not EspSection or not BoxSettingsSection then
+    warn(string.format("LỖI UI BOX ESP: Thiếu biến UI. Compkiller: %s, EspSection: %s, BoxSettingsSection: %s", 
+        tostring(Compkiller), tostring(EspSection), tostring(BoxSettingsSection)))
+    return -- Dừng nếu các Section không hợp lệ
 end
+
+print("DEBUG: BoxEsp Script: Bắt đầu tạo UI components...")
+
+local EspToggle = EspSection:AddToggle({
+	Name = "Box ESP",
+	Flag = "Toggle_BoxESP",
+	Default = false,
+	Risky = false,
+	Callback = function(value)
+		EspState.config.enabled = value
+	end
+})
+
+-- ========== OPTION 1: CƠ BẢN VÀ MÀU SẮC ==========
+local BaseOption = EspToggle.Link:AddOption()
+
+BaseOption:AddDropdown({
+	Name = "Box Mode",
+	Default = "2D Full",
+	Flag = "Dropdown_BoxMode",
+	Values = {"2D Full", "2D Corner", "3D"},
+	Callback = function(value)
+		EspState.config.boxMode = value
+		refreshAllBoxes() 
+	end
+})
+
+BaseOption:AddDropdown({
+	Name = "Color Mode",
+	Default = "Static",
+	Flag = "Dropdown_ColorMode",
+	Values = {"Static", "Team", "Health", "Rainbow"},
+	Callback = function(value)
+		EspState.config.colorMode = value
+	end
+})
+
+BaseOption:AddColorPicker({
+	Name = "Static Box Color",
+	Default = Color3.fromRGB(255, 255, 235),
+	Flag = "Color_Picker_StaticBoxESP",
+	Callback = function(value)
+		EspState.config.baseColor = value 
+		if EspState.config.colorMode == "Static" then
+			EspState.config.boxColor = value 
+		end
+	end
+})
+
+BaseOption:AddSlider({
+	Name = "Rainbow Speed",
+	Min = 0,
+	Max = 10, 
+	Default = 1,
+	Round = 1, 
+	Flag = "Slider_RainbowSpeed",
+	Callback = function(value)
+		EspState.config.rainbowSpeed = value
+	end
+})
+
+BaseOption:AddToggle({
+	Risky = false,
+	Name = "Outline (Stroke)", 
+	Flag = "Toggle_Outline",
+	Callback = function(value)
+		EspState.config.outline = value
+		refreshAllBoxes() 
+	end
+})
+
+BaseOption:AddSlider({
+	Name = "Transparency",
+	Min = 0,
+	Max = 1,
+	Default = 0.8,
+	Round = 2,
+	Flag = "Slider_Transparency",
+	Callback = function(value)
+		EspState.config.transparency = value
+	end
+})
+
+-- ========== TÙY CHỈNH CHUNG ==========
+
+BoxSettingsSection:AddSlider({
+	Name = "Max Distance",
+	Min = 0,
+	Max = 50000,
+	Default = 500,
+	Round = 0,
+	Flag = "Slider_MaxDistance",
+	Callback = function(value)
+		EspState.config.maxDistance = value
+	end
+})
+
+BoxSettingsSection:AddParagraph({
+	Title = "Tối ưu và Bypass",
+	Content = "Thiết lập hiệu suất, làm mượt (LERP) và các tính năng Anti-Cheat Bypass (Jitter, Raycast)."
+})
+
+local AdvancedToggle = BoxSettingsSection:AddToggle({
+	Default = true,
+	Risky = true,
+	Name = "Advanced Settings",
+	Flag = "Toggle_AdvancedSettings",
+	Callback = function() end 
+})
+
+-- ========== OPTION 2: TỐI ƯU HÓA (Performance) ==========
+local PerformanceOption = AdvancedToggle.Link:AddOption({
+	Name = "Performance",
+	Default = true,
+})
+
+PerformanceOption:AddToggle({
+	Default = true,
+	Risky = true,
+	Name = "Async Update (CPU Save)",
+	Flag = "Toggle_AsyncUpdate",
+	Callback = function(value)
+		EspState.config.asyncUpdate = value
+	end
+})
+
+PerformanceOption:AddToggle({
+	Risky = false,
+	Name = "FOV Culling (Tối ưu)",
+	Flag = "Toggle_FovCulling",
+	Default = true,
+	Callback = function(value)
+		EspState.config.fovCulling = value
+	end
+})
+
+PerformanceOption:AddDropdown({
+	Name = "Pool Management",
+	Default = "Dynamic",
+	Flag = "Dropdown_PoolMode",
+	Values = {"Dynamic", "Fixed"},
+	Callback = function(value)
+		EspState.config.poolMode = value
+	end
+})
+
+PerformanceOption:AddSlider({
+	Name = "Fixed Pool Size (Nếu Fixed)",
+	Min = 100,
+	Max = 5000, 
+	Default = 1500,
+	Round = 0,
+	Flag = "Slider_FixedPoolSize",
+	Callback = function(value)
+		EspState.config.fixedPoolSize = value
+	end
+})
+
+-- ========== OPTION 3: BYPASS & MƯỢT (Smoothing & AC Bypass) ==========
+local BypassOption = AdvancedToggle.Link:AddOption({
+	Name = "Smoothing & Bypass",
+	Default = false,
+})
+
+-- LERP Smoothing
+BypassOption:AddToggle({
+	Risky = false,
+	Name = "Lerp Smoothing (Làm Mượt)",
+	Flag = "Toggle_LerpSmoothing",
+	Default = true,
+	Callback = function(value)
+		EspState.config.lerpSmoothing = value
+	end
+})
+
+BypassOption:AddSlider({
+	Name = "Lerp Factor (Hệ số Mượt)",
+	Min = 0.05,
+	Max = 0.5,
+	Default = 0.15,
+	Round = 2,
+	Flag = "Slider_LerpFactor",
+	Callback = function(value)
+		EspState.config.lerpFactor = value
+	end
+})
+
+-- Jitter/Flicker
+BypassOption:AddToggle({
+	Risky = true,
+	Name = "Jitter/Flicker (AC Bypass)", 
+	Flag = "Toggle_Jitter",
+	Callback = function(value)
+		EspState.config.jitterEnabled = value
+	end
+})
+
+BypassOption:AddSlider({
+	Name = "Jitter Intensity (px)",
+	Min = 0.1,
+	Max = 5, 
+	Default = 1,
+	Round = 1, 
+	Flag = "Slider_JitterIntensity",
+	Callback = function(value)
+		EspState.config.jitterIntensity = value
+	end
+})
+
+-- Raycast
+BypassOption:AddToggle({
+	Risky = false,
+	Name = "Raycast Check (Che khuất)",
+	Flag = "Toggle_RaycastCheck",
+	Callback = function(value)
+		EspState.config.raycastCheck = value
+	end
+})
+
+BypassOption:AddToggle({
+	Risky = false,
+	Name = "Fade When Blocked",
+	Flag = "Toggle_FadeBlocked",
+	Callback = function(value)
+		EspState.config.fadeWhenBlocked = value
+	end
+})
+
+-- Team Filter Mode
+BypassOption:AddToggle({
+	Risky = false,
+	Name = "Team Filter",
+	Flag = "Toggle_TeamFilter",
+	Callback = function(value)
+		EspState.config.teamFilter = value
+	end
+})
+
+BypassOption:AddDropdown({
+	Name = "Team Filter Mode",
+	Default = "Standard",
+	Flag = "Dropdown_TeamFilterMode",
+	Values = {"Standard", "Custom"},
+	Callback = function(value)
+		EspState.config.teamFilterMode = value == "Standard" and "standard" or "custom"
+	end
+})
+
+end -- Kết thúc hàm chính (được trả về bởi return function)
