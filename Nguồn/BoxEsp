@@ -1,1 +1,756 @@
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local rainbowHue = 0 
+local speedScale = 200 
+local random = math.random
+local abs = math.abs
+
+local EspState = {
+	config = {
+		enabled = false,
+		boxMode = "2D Full",
+		colorMode = "Static",
+		asyncUpdate = true,
+		teamFilter = false,
+		maxDistance = 500,
+		raycastCheck = false,
+		fadeWhenBlocked = false,
+		teamFilterMode = "standard",
+		boxColor = Color3.fromRGB(255, 255, 235),
+		baseColor = Color3.fromRGB(255, 255, 235), 
+		thickness = 2, 
+		transparency = 0.8,
+		rainbowSpeed = 1,
+		outline = false,   
+		
+		jitterEnabled = false,
+		jitterIntensity = 1, 
+		fovCulling = true, 
+		
+		poolMode = "Dynamic",
+		fixedPoolSize = 1500,
+		
+		-- Cấu hình Lerp Smoothing
+		lerpSmoothing = true, 
+		lerpFactor = 0.15,    
+	},
+	playerBoxes = {},
+	linePool = {},
+	poolSize = 0,
+}
+
+-- Hàm LERP cho Vector2
+local function vector2Lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+local function applyJitter(coord)
+    if not EspState.config.jitterEnabled then return coord end
+    local intensity = EspState.config.jitterIntensity or 1
+    local offsetX = (random() * 2 - 1) * intensity 
+    local offsetY = (random() * 2 - 1) * intensity
+    return coord + Vector2.new(offsetX, offsetY)
+end
+
+
+local function isSameTeam(player1, player2)
+	if not player1 or not player2 or not player1.Character or not player2.Character then 
+		return false 
+	end
+	
+	if EspState.config.teamFilterMode == "standard" then
+		return player1.Team ~= nil and player1.Team == player2.Team
+	else
+		if player1.Team ~= nil and player1.Team == player2.Team then 
+			return true 
+		end
+		local success1, attribute1 = pcall(function() 
+			return player1.Character:GetAttribute("Team") 
+		end)
+		local success2, attribute2 = pcall(function() 
+			return player2.Character:GetAttribute("Team") 
+		end)
+		return success1 and success2 and attribute1 ~= nil and attribute1 == attribute2
+	end
+end
+
+local function isInsideFOV(position)
+	if not EspState.config.fovCulling then return true end
+	
+	local screenPoint, visible = Camera:WorldToViewportPoint(position)
+	
+	if screenPoint.Z <= 0 then return false end
+
+	local sizeX, sizeY = Camera.ViewportSize.X, Camera.ViewportSize.Y
+	return screenPoint.X >= 0 and screenPoint.X <= sizeX and screenPoint.Y >= 0 and screenPoint.Y <= sizeY
+end
+
+local function shouldShowPlayer(player)
+	if player == LocalPlayer or not EspState.config.enabled then 
+		return false 
+	end
+	
+	local character = player.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then 
+		return false 
+	end
+	
+	local rootPart = character.HumanoidRootPart
+	local localCharacter = LocalPlayer.Character
+	if not localCharacter or not localCharacter:FindFirstChild("HumanoidRootPart") then 
+		return false 
+	end
+	
+	local distance = (rootPart.Position - localCharacter.HumanoidRootPart.Position).Magnitude
+	if distance > EspState.config.maxDistance then 
+		return false 
+	end
+	
+	if EspState.config.teamFilter and isSameTeam(LocalPlayer, player) then 
+		return false 
+	end
+	
+	if not isInsideFOV(rootPart.Position) then
+		return false
+	end
+	
+	return true
+end
+
+local function isBlockedByWall(targetPosition, targetCharacter, originPosition)
+	if not EspState.config.raycastCheck then 
+		return false 
+	end
+	
+	local localCharacter = LocalPlayer.Character
+	if not localCharacter then 
+		return true 
+	end
+	
+	local distance = (targetPosition - originPosition).Magnitude
+	local rayDirection = (targetPosition - originPosition).Unit * distance
+	local raycastParameters = RaycastParams.new()
+	raycastParameters.FilterType = Enum.RaycastFilterType.Blacklist
+	raycastParameters.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
+	
+	local raycastResult = Workspace:Raycast(originPosition, rayDirection, raycastParameters)
+	if not raycastResult then 
+		return false 
+	end
+	
+	return (raycastResult.Position - originPosition).Magnitude < distance
+end
+
+local function calculate2DBox(character)
+	if not character or not character.Parent then return nil end
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChild("Humanoid")
+	local head = character:FindFirstChild("Head")
+	if not rootPart or not humanoid or humanoid.Health <= 0 or not head then return nil end
+	
+	local topPosition = head.Position + Vector3.new(0, head.Size.Y / 2, 0)
+	local bottomPosition = rootPart.Position - Vector3.new(0, 3, 0) 
+	local topScreen, bottomScreen, centerScreen = Camera:WorldToViewportPoint(topPosition), Camera:WorldToViewportPoint(bottomPosition), Camera:WorldToViewportPoint(rootPart.Position)
+	
+	if topScreen.Z <= 0 or bottomScreen.Z <= 0 then return nil end
+	
+	local screenHeight = abs(topScreen.Y - bottomScreen.Y)
+	local screenWidth = screenHeight * 0.6
+	local centerX = centerScreen.X
+	
+	return {
+		TopLeft = Vector2.new(centerX - screenWidth / 2, topScreen.Y),
+		TopRight = Vector2.new(centerX + screenWidth / 2, topScreen.Y),
+		BottomLeft = Vector2.new(centerX - screenWidth / 2, bottomScreen.Y),
+		BottomRight = Vector2.new(centerX + screenWidth / 2, bottomScreen.Y),
+		Width = screenWidth,
+		Height = screenHeight
+	}
+end
+
+local function calculate3DBox(character)
+	if not character or not character.Parent then return nil end
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then return nil end
+	
+	local minX, maxX, minY, maxY, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local position = part.Position
+			local size = part.Size
+			minX = math.min(minX, position.X - size.X / 2)
+			maxX = math.max(maxX, position.X + size.X / 2)
+			minY = math.min(minY, position.Y - size.Y / 2)
+			maxY = math.max(maxY, position.Y + size.Y / 2)
+			minZ = math.min(minZ, position.Z - size.Z / 2)
+			maxZ = math.max(maxZ, position.Z + size.Z / 2)
+		end
+	end
+	
+	if minX == math.huge then return nil end
+	
+	local corners = {
+		Vector3.new(minX, minY, minZ), Vector3.new(maxX, minY, minZ), Vector3.new(maxX, minY, maxZ), Vector3.new(minX, minY, maxZ),
+		Vector3.new(minX, maxY, minZ), Vector3.new(maxX, maxY, minZ), Vector3.new(maxX, maxY, maxZ), Vector3.new(minX, maxY, maxZ)
+	}
+	
+	local screenCorners = {}
+	for index, corner in ipairs(corners) do
+		local screenPoint = Camera:WorldToViewportPoint(corner)
+		if screenPoint.Z <= 0 then return nil end
+		screenCorners[index] = Vector2.new(screenPoint.X, screenPoint.Y)
+	end
+	
+	return screenCorners
+end
+
+local function getLineFromPool(lineThickness)
+	if EspState.poolSize > 0 then
+		local line = EspState.linePool[EspState.poolSize]
+		EspState.linePool[EspState.poolSize] = nil
+		EspState.poolSize = EspState.poolSize - 1
+		line.Thickness = lineThickness
+		line.Visible = true 
+		return line
+	end
+	
+	local newLine = Drawing.new("Line")
+	newLine.Thickness = lineThickness
+	newLine.Color = EspState.config.boxColor
+	newLine.Transparency = EspState.config.transparency
+	return newLine
+end
+
+local function returnLineToPool(line)
+	line.Visible = false
+	
+	if EspState.config.poolMode == "Fixed" and EspState.poolSize >= EspState.config.fixedPoolSize then
+		line:Remove()
+		return
+	end
+
+	EspState.poolSize = EspState.poolSize + 1
+	EspState.linePool[EspState.poolSize] = line
+end
+
+local function removePlayerBox(player)
+	if EspState.playerBoxes[player] then
+		for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+			returnLineToPool(line) 
+		end
+		EspState.playerBoxes[player] = nil
+	end
+end
+
+-- Hàm đặt thuộc tính Line (có LERP)
+local function setLineProperties(line, fromPosition, toPosition, color, thickness, transparency, playerBoxData)
+	line.Color = color
+	line.Thickness = thickness
+	line.Transparency = transparency
+	line.Visible = true
+	
+	-- Áp dụng LERP Smoothing
+	if EspState.config.lerpSmoothing and playerBoxData and playerBoxData.PreviousPositions and playerBoxData.PreviousPositions[line] then
+		local prevData = playerBoxData.PreviousPositions[line]
+		local lerpFactor = EspState.config.lerpFactor
+		
+		if prevData.From and prevData.To then
+			-- Nội suy giữa vị trí hiển thị frame trước (prevData) và vị trí mới tính toán (fromPosition/toPosition)
+			line.From = vector2Lerp(prevData.From, fromPosition, lerpFactor)
+			line.To = vector2Lerp(prevData.To, toPosition, lerpFactor)
+		else
+			-- Khởi tạo vị trí ban đầu
+			line.From = fromPosition
+			line.To = toPosition
+		end
+		
+		-- Cập nhật vị trí LERP đã tính toán để sử dụng làm 'trước đó' trong frame tiếp theo
+		prevData.From = line.From
+		prevData.To = line.To
+	else
+		-- Chế độ không LERP (vị trí cập nhật tức thì)
+		line.From = fromPosition
+		line.To = toPosition
+	end
+end
+
+local function getHealthColor(humanoid)
+    if not humanoid or humanoid.MaxHealth <= 0 then return EspState.config.baseColor end
+    local healthRatio = humanoid.Health / humanoid.MaxHealth
+    return Color3.fromHSV(healthRatio * 0.33, 1, 1)
+end
+
+local function getBoxColor(player)
+    local colorMode = EspState.config.colorMode
+    local character = player.Character
+    local humanoid = character and character:FindFirstChild("Humanoid")
+
+    if colorMode == "Rainbow" then return EspState.config.boxColor 
+    elseif colorMode == "Team" then return player.Team and player.Team.TeamColor.Color or EspState.config.baseColor
+    elseif colorMode == "Health" and humanoid then return getHealthColor(humanoid)
+    else return EspState.config.baseColor
+    end
+end
+
+local function updatePlayerBox(player)
+	if not shouldShowPlayer(player) then
+		removePlayerBox(player)
+		return
+	end
+	
+	local character = player.Character
+	local targetPosition = character.HumanoidRootPart.Position
+	local originPosition = LocalPlayer.Character.HumanoidRootPart.Position
+	local blocked = isBlockedByWall(targetPosition, character, originPosition)
+	
+	if blocked and not EspState.config.fadeWhenBlocked then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do line.Visible = false end
+		end
+		return
+	end
+	
+	local boxPoints 
+	if EspState.config.boxMode == "3D" then
+		boxPoints = calculate3DBox(character)
+	elseif EspState.config.boxMode == "2D Full" or EspState.config.boxMode == "2D Corner" then
+		boxPoints = calculate2DBox(character)
+	else
+        boxPoints = calculate2DBox(character) -- Mặc định 2D Full
+    end
+
+	if not boxPoints then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do line.Visible = false end
+		end
+		return
+	end
+	
+	local color = getBoxColor(player) 
+	local thickness = EspState.config.thickness
+	local transparency = EspState.config.fadeWhenBlocked and blocked and 0.4 or EspState.config.transparency
+	
+	local baseLinesNeeded
+	if EspState.config.boxMode == "3D" then baseLinesNeeded = 12
+	elseif EspState.config.boxMode == "2D Corner" then baseLinesNeeded = 8
+	else baseLinesNeeded = 4
+	end
+
+	local lineCount = EspState.config.outline and baseLinesNeeded * 2 or baseLinesNeeded
+	
+	-- Quản lý Line Pool (Thêm PreviousPositions cho LERP)
+	if not EspState.playerBoxes[player] or #EspState.playerBoxes[player].Lines ~= lineCount then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do returnLineToPool(line) end
+		end
+		
+		-- Khởi tạo playerBoxData với Lines và PreviousPositions
+		local playerBoxData = {Lines = {}, PreviousPositions = {}} 
+		EspState.playerBoxes[player] = playerBoxData
+		
+		for _ = 1, lineCount do 
+			local line = getLineFromPool(thickness)
+			table.insert(playerBoxData.Lines, line) 
+			-- Khởi tạo vị trí LERP
+			playerBoxData.PreviousPositions[line] = {From = nil, To = nil}
+		end
+	end
+	
+	local lineIndex = 1
+	local playerBoxData = EspState.playerBoxes[player]
+	local lines = playerBoxData.Lines
+
+	local function drawLine(from, to, mainColor, mainThickness, mainTransparency)
+		from = applyJitter(from) 
+		to = applyJitter(to)
+
+		if EspState.config.outline then
+			-- Outline Line
+			setLineProperties(lines[lineIndex], from, to, Color3.new(0, 0, 0), mainThickness + 1, 0.2, playerBoxData) 
+			lineIndex = lineIndex + 1
+		end
+		-- Main Line
+		setLineProperties(lines[lineIndex], from, to, mainColor, mainThickness, mainTransparency, playerBoxData)
+		lineIndex = lineIndex + 1
+	end
+
+	if EspState.config.boxMode == "3D" then
+		local connections = {
+			{1, 2}, {2, 3}, {3, 4}, {4, 1},
+			{5, 6}, {6, 7}, {7, 8}, {8, 5},
+			{1, 5}, {2, 6}, {3, 7}, {4, 8}
+		}
+		
+		for _, connection in ipairs(connections) do
+			local p1 = boxPoints[connection[1]]
+			local p2 = boxPoints[connection[2]]
+			if p1 and p2 then
+				drawLine(p1, p2, color, thickness, transparency)
+			end
+		end
+
+	else
+		local TL, TR, BL, BR = boxPoints.TopLeft, boxPoints.TopRight, boxPoints.BottomLeft, boxPoints.BottomRight
+		local boxWidth = boxPoints.Width
+		local boxHeight = boxPoints.Height
+		
+		if EspState.config.boxMode == "2D Corner" then
+			local cornerLength = math.min(boxWidth, boxHeight) / 4 
+			
+			drawLine(TL, TL + Vector2.new(cornerLength, 0), color, thickness, transparency)
+			drawLine(TL, TL + Vector2.new(0, cornerLength), color, thickness, transparency)
+
+			drawLine(TR, TR + Vector2.new(-cornerLength, 0), color, thickness, transparency)
+			drawLine(TR, TR + Vector2.new(0, cornerLength), color, thickness, transparency)
+			
+			drawLine(BR, BR + Vector2.new(-cornerLength, 0), color, thickness, transparency)
+			drawLine(BR, BR + Vector2.new(0, -cornerLength), color, thickness, transparency)
+			
+			drawLine(BL, BL + Vector2.new(cornerLength, 0), color, thickness, transparency)
+			drawLine(BL, BL + Vector2.new(0, -cornerLength), color, thickness, transparency)
+			
+		else
+			drawLine(TL, TR, color, thickness, transparency)
+			drawLine(TR, BR, color, thickness, transparency)
+			drawLine(BR, BL, color, thickness, transparency)
+			drawLine(BL, TL, color, thickness, transparency)
+		end
+	end
+	
+	for i = lineIndex, #lines do
+		lines[i].Visible = false
+	end
+end
+
+local function updateAllPlayers()
+	local playerBatch = Players:GetPlayers()
+	
+	local filteredBatch = {}
+	for _, player in ipairs(playerBatch) do
+		if player ~= LocalPlayer then 
+			table.insert(filteredBatch, player) 
+		end
+	end
+
+	if EspState.config.asyncUpdate and #filteredBatch > 5 then
+		task.spawn(function()
+			for _, player in ipairs(filteredBatch) do 
+				updatePlayerBox(player) 
+			end
+		end)
+	else
+		for _, player in ipairs(filteredBatch) do 
+			updatePlayerBox(player) 
+		end
+	end
+end
+
+local function hideAllBoxes()
+	for player, data in pairs(EspState.playerBoxes) do
+		if data and data.Lines then
+			for _, line in ipairs(data.Lines) do 
+				line.Visible = false 
+			end
+		end
+	end
+end
+
+local function refreshAllBoxes()
+	for player, data in pairs(EspState.playerBoxes) do
+		if data and data.Lines then
+			for _, line in ipairs(data.Lines) do 
+				returnLineToPool(line) 
+			end
+		end
+		EspState.playerBoxes[player] = nil
+	end
+	updateAllPlayers()
+end
+
+-- ==========================================================
+-- CONNECTORS
+-- ==========================================================
+
+RunService.RenderStepped:Connect(function()
+	if EspState.config.enabled then
+        if EspState.config.colorMode == "Rainbow" then
+            local scaledSpeed = EspState.config.rainbowSpeed / speedScale 
+            rainbowHue = (rainbowHue + scaledSpeed) % 1 
+            EspState.config.boxColor = Color3.fromHSV(rainbowHue, 1, 1)
+        elseif EspState.config.colorMode == "Static" and EspState.config.boxColor ~= EspState.config.baseColor then
+            EspState.config.boxColor = EspState.config.baseColor
+        end
+
+		updateAllPlayers() 
+	else 
+		hideAllBoxes() 
+	end
+end)
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function() 
+		updatePlayerBox(player) 
+	end)
+	if player.Character then 
+		updatePlayerBox(player) 
+	end
+end)
+
+Players.PlayerRemoving:Connect(removePlayerBox) 
+
+-- ========== PHẦN CODE UI (SẮP XẾP LẠI VÀ RÚT GỌN) ==========
+if typeof(EspSection) == 'nil' or typeof(BoxSettingsSection) == 'nil' then
+	warn("LƯU Ý: Không tìm thấy các biến UI (EspSection, BoxSettingsSection). Code UI từ dòng 402 trở đi sẽ không hoạt động nếu không có framework UI.")
+else
+	
+	local EspToggle = EspSection:AddToggle({
+		Name = "Box ESP",
+		Flag = "Toggle_BoxESP",
+		Default = false,
+		Risky = false,
+		Callback = function(value)
+			EspState.config.enabled = value
+		end
+	})
+
+	-- ========== OPTION 1: CƠ BẢN VÀ MÀU SẮC ==========
+	local BaseOption = EspToggle.Link:AddOption()
+
+	BaseOption:AddDropdown({
+		Name = "Box Mode",
+		Default = "2D Full",
+		Flag = "Dropdown_BoxMode",
+		Values = {"2D Full", "2D Corner", "3D"},
+		Callback = function(value)
+			EspState.config.boxMode = value
+			refreshAllBoxes() 
+		end
+	})
+
+	BaseOption:AddDropdown({
+		Name = "Color Mode",
+		Default = "Static",
+		Flag = "Dropdown_ColorMode",
+		Values = {"Static", "Team", "Health", "Rainbow"},
+		Callback = function(value)
+			EspState.config.colorMode = value
+		end
+	})
+	
+	BaseOption:AddColorPicker({
+		Name = "Static Box Color",
+		Default = Color3.fromRGB(255, 255, 235),
+		Flag = "Color_Picker_StaticBoxESP",
+		Callback = function(value)
+			EspState.config.baseColor = value 
+			if EspState.config.colorMode == "Static" then
+				EspState.config.boxColor = value 
+			end
+		end
+	})
+
+	BaseOption:AddSlider({
+		Name = "Rainbow Speed",
+		Min = 0,
+		Max = 10, 
+		Default = 1,
+		Round = 1, 
+		Flag = "Slider_RainbowSpeed",
+		Callback = function(value)
+			EspState.config.rainbowSpeed = value
+		end
+	})
+	
+	BaseOption:AddToggle({
+		Risky = false,
+		Name = "Outline (Stroke)", 
+		Flag = "Toggle_Outline",
+		Callback = function(value)
+			EspState.config.outline = value
+			refreshAllBoxes() 
+		end
+	})
+	
+	BaseOption:AddSlider({
+		Name = "Transparency",
+		Min = 0,
+		Max = 1,
+		Default = 0.8,
+		Round = 2,
+		Flag = "Slider_Transparency",
+		Callback = function(value)
+			EspState.config.transparency = value
+		end
+	})
+	
+	-- ========== TÙY CHỈNH CHUNG ==========
+	
+	BoxSettingsSection:AddSlider({
+		Name = "Max Distance",
+		Min = 0,
+		Max = 50000,
+		Default = 500,
+		Round = 0,
+		Flag = "Slider_MaxDistance",
+		Callback = function(value)
+			EspState.config.maxDistance = value
+		end
+	})
+	
+	BoxSettingsSection:AddParagraph({
+		Title = "Tối ưu và Bypass",
+		Content = "Thiết lập hiệu suất, làm mượt (LERP) và các tính năng Anti-Cheat Bypass (Jitter, Raycast)."
+	})
+
+	local AdvancedToggle = BoxSettingsSection:AddToggle({
+		Default = true,
+		Risky = true,
+		Name = "Advanced Settings",
+		Flag = "Toggle_AdvancedSettings",
+		Callback = function() end 
+	})
+
+	-- ========== OPTION 2: TỐI ƯU HÓA (Performance) ==========
+	local PerformanceOption = AdvancedToggle.Link:AddOption({
+		Name = "Performance",
+		Default = true,
+	})
+
+	PerformanceOption:AddToggle({
+		Default = true,
+		Risky = true,
+		Name = "Async Update (CPU Save)",
+		Flag = "Toggle_AsyncUpdate",
+		Callback = function(value)
+			EspState.config.asyncUpdate = value
+		end
+	})
+	
+	PerformanceOption:AddToggle({
+		Risky = false,
+		Name = "FOV Culling (Tối ưu)",
+		Flag = "Toggle_FovCulling",
+		Default = true,
+		Callback = function(value)
+			EspState.config.fovCulling = value
+		end
+	})
+
+	PerformanceOption:AddDropdown({
+		Name = "Pool Management",
+		Default = "Dynamic",
+		Flag = "Dropdown_PoolMode",
+		Values = {"Dynamic", "Fixed"},
+		Callback = function(value)
+			EspState.config.poolMode = value
+		end
+	})
+
+	PerformanceOption:AddSlider({
+		Name = "Fixed Pool Size (Nếu Fixed)",
+		Min = 100,
+		Max = 5000, 
+		Default = 1500,
+		Round = 0,
+		Flag = "Slider_FixedPoolSize",
+		Callback = function(value)
+			EspState.config.fixedPoolSize = value
+		end
+	})
+	
+	-- ========== OPTION 3: BYPASS & MƯỢT (Smoothing & AC Bypass) ==========
+	local BypassOption = AdvancedToggle.Link:AddOption({
+		Name = "Smoothing & Bypass",
+		Default = false,
+	})
+
+	-- LERP Smoothing
+	BypassOption:AddToggle({
+		Risky = false,
+		Name = "Lerp Smoothing (Làm Mượt)",
+		Flag = "Toggle_LerpSmoothing",
+		Default = true,
+		Callback = function(value)
+			EspState.config.lerpSmoothing = value
+		end
+	})
+	
+	BypassOption:AddSlider({
+		Name = "Lerp Factor (Hệ số Mượt)",
+		Min = 0.05,
+		Max = 0.5,
+		Default = 0.15,
+		Round = 2,
+		Flag = "Slider_LerpFactor",
+		Callback = function(value)
+			EspState.config.lerpFactor = value
+		end
+	})
+
+	-- Jitter/Flicker
+	BypassOption:AddToggle({
+		Risky = true,
+		Name = "Jitter/Flicker (AC Bypass)", 
+		Flag = "Toggle_Jitter",
+		Callback = function(value)
+			EspState.config.jitterEnabled = value
+		end
+	})
+
+	BypassOption:AddSlider({
+		Name = "Jitter Intensity (px)",
+		Min = 0.1,
+		Max = 5, 
+		Default = 1,
+		Round = 1, 
+		Flag = "Slider_JitterIntensity",
+		Callback = function(value)
+			EspState.config.jitterIntensity = value
+		end
+	})
+	
+	-- Raycast
+	BypassOption:AddToggle({
+		Risky = false,
+		Name = "Raycast Check (Che khuất)",
+		Flag = "Toggle_RaycastCheck",
+		Callback = function(value)
+			EspState.config.raycastCheck = value
+		end
+	})
+
+	BypassOption:AddToggle({
+		Risky = false,
+		Name = "Fade When Blocked",
+		Flag = "Toggle_FadeBlocked",
+		Callback = function(value)
+			EspState.config.fadeWhenBlocked = value
+		end
+	})
+	
+	-- Team Filter Mode
+	BypassOption:AddToggle({
+		Risky = false,
+		Name = "Team Filter",
+		Flag = "Toggle_TeamFilter",
+		Callback = function(value)
+			EspState.config.teamFilter = value
+		end
+	})
+	
+	BypassOption:AddDropdown({
+		Name = "Team Filter Mode",
+		Default = "Standard",
+		Flag = "Dropdown_TeamFilterMode",
+		Values = {"Standard", "Custom"},
+		Callback = function(value)
+			EspState.config.teamFilterMode = value == "Standard" and "standard" or "custom"
+		end
+	})
+
+end
