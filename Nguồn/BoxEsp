@@ -1,5 +1,4 @@
--- Bọc toàn bộ script trong một hàm để trả về
-return function(EspSection, BoxSettingsSection)
+
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -727,5 +726,4 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-end -- Kết thúc bọc hàm UI
 end
