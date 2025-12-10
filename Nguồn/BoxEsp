@@ -1,4 +1,6 @@
-
+-- Bọc toàn bộ script trong một hàm và trả về.
+-- Hàm này nhận các biến quan trọng từ script cha (Compkiller, Sections UI)
+return function(Compkiller, EspSection, BoxSettingsSection)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -506,8 +508,8 @@ Players.PlayerRemoving:Connect(removePlayerBox)
 
 -- ========== PHẦN CODE UI (SẮP XẾP LẠI VÀ RÚT GỌN) ==========
 
--- Sử dụng các biến EspSection và BoxSettingsSection đã được truyền vào
-if EspSection and BoxSettingsSection then
+-- Kiểm tra cả Compkiller (thư viện gốc) và các Sections UI
+if Compkiller and EspSection and BoxSettingsSection then
 	
 	local EspToggle = EspSection:AddToggle({
 		Name = "Box ESP",
@@ -519,7 +521,10 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddDropdown({
+	-- ========== OPTION 1: CƠ BẢN VÀ MÀU SẮC ==========
+	local BaseOption = EspToggle.Link:AddOption()
+
+	BaseOption:AddDropdown({
 		Name = "Box Mode",
 		Default = "2D Full",
 		Flag = "Dropdown_BoxMode",
@@ -530,7 +535,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddDropdown({
+	BaseOption:AddDropdown({
 		Name = "Color Mode",
 		Default = "Static",
 		Flag = "Dropdown_ColorMode",
@@ -540,7 +545,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddColorPicker({
+	BaseOption:AddColorPicker({
 		Name = "Static Box Color",
 		Default = Color3.fromRGB(255, 255, 235),
 		Flag = "Color_Picker_StaticBoxESP",
@@ -552,7 +557,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddSlider({
+	BaseOption:AddSlider({
 		Name = "Rainbow Speed",
 		Min = 0,
 		Max = 10, 
@@ -564,7 +569,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddToggle({
+	BaseOption:AddToggle({
 		Risky = false,
 		Name = "Outline (Stroke)", 
 		Flag = "Toggle_Outline",
@@ -574,7 +579,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddSlider({
+	BaseOption:AddSlider({
 		Name = "Transparency",
 		Min = 0,
 		Max = 1,
@@ -600,8 +605,26 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
+	BoxSettingsSection:AddParagraph({
+		Title = "Tối ưu và Bypass",
+		Content = "Thiết lập hiệu suất, làm mượt (LERP) và các tính năng Anti-Cheat Bypass (Jitter, Raycast)."
+	})
 
-	BoxSettingsSection:AddToggle({
+	local AdvancedToggle = BoxSettingsSection:AddToggle({
+		Default = true,
+		Risky = true,
+		Name = "Advanced Settings",
+		Flag = "Toggle_AdvancedSettings",
+		Callback = function() end 
+	})
+
+	-- ========== OPTION 2: TỐI ƯU HÓA (Performance) ==========
+	local PerformanceOption = AdvancedToggle.Link:AddOption({
+		Name = "Performance",
+		Default = true,
+	})
+
+	PerformanceOption:AddToggle({
 		Default = true,
 		Risky = true,
 		Name = "Async Update (CPU Save)",
@@ -611,7 +634,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddToggle({
+	PerformanceOption:AddToggle({
 		Risky = false,
 		Name = "FOV Culling (Tối ưu)",
 		Flag = "Toggle_FovCulling",
@@ -621,7 +644,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddDropdown({
+	PerformanceOption:AddDropdown({
 		Name = "Pool Management",
 		Default = "Dynamic",
 		Flag = "Dropdown_PoolMode",
@@ -631,7 +654,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddSlider({
+	PerformanceOption:AddSlider({
 		Name = "Fixed Pool Size (Nếu Fixed)",
 		Min = 100,
 		Max = 5000, 
@@ -643,7 +666,14 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddToggle({
+	-- ========== OPTION 3: BYPASS & MƯỢT (Smoothing & AC Bypass) ==========
+	local BypassOption = AdvancedToggle.Link:AddOption({
+		Name = "Smoothing & Bypass",
+		Default = false,
+	})
+
+	-- LERP Smoothing
+	BypassOption:AddToggle({
 		Risky = false,
 		Name = "Lerp Smoothing (Làm Mượt)",
 		Flag = "Toggle_LerpSmoothing",
@@ -653,7 +683,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddSlider({
+	BypassOption:AddSlider({
 		Name = "Lerp Factor (Hệ số Mượt)",
 		Min = 0.05,
 		Max = 0.5,
@@ -666,7 +696,7 @@ if EspSection and BoxSettingsSection then
 	})
 
 	-- Jitter/Flicker
-	BoxSettingsSection:AddToggle({
+	BypassOption:AddToggle({
 		Risky = true,
 		Name = "Jitter/Flicker (AC Bypass)", 
 		Flag = "Toggle_Jitter",
@@ -675,7 +705,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddSlider({
+	BypassOption:AddSlider({
 		Name = "Jitter Intensity (px)",
 		Min = 0.1,
 		Max = 5, 
@@ -688,7 +718,7 @@ if EspSection and BoxSettingsSection then
 	})
 	
 	-- Raycast
-	BoxSettingsSection:AddToggle({
+	BypassOption:AddToggle({
 		Risky = false,
 		Name = "Raycast Check (Che khuất)",
 		Flag = "Toggle_RaycastCheck",
@@ -697,7 +727,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
-	BoxSettingsSection:AddToggle({
+	BypassOption:AddToggle({
 		Risky = false,
 		Name = "Fade When Blocked",
 		Flag = "Toggle_FadeBlocked",
@@ -707,7 +737,7 @@ if EspSection and BoxSettingsSection then
 	})
 	
 	-- Team Filter Mode
-	BoxSettingsSection:AddToggle({
+	BypassOption:AddToggle({
 		Risky = false,
 		Name = "Team Filter",
 		Flag = "Toggle_TeamFilter",
@@ -716,7 +746,7 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 	
-	BoxSettingsSection:AddDropdown({
+	BypassOption:AddDropdown({
 		Name = "Team Filter Mode",
 		Default = "Standard",
 		Flag = "Dropdown_TeamFilterMode",
@@ -726,4 +756,5 @@ if EspSection and BoxSettingsSection then
 		end
 	})
 
+end -- Kết thúc bọc hàm UI
 end
