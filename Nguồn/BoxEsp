@@ -1,6 +1,4 @@
 -- Bọc toàn bộ script trong một hàm để trả về
-return function(EspSection, BoxSettingsSection)
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -754,6 +752,4 @@ if EspSection and BoxSettingsSection then
 			EspState.config.teamFilterMode = value == "Standard" and "standard" or "custom"
 		end
 	})
-
-end -- Kết thúc bọc hàm UI
 end
