@@ -1,3 +1,5 @@
+-- Bọc toàn bộ script trong một hàm để trả về
+return function(EspSection, BoxSettingsSection)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -504,9 +506,9 @@ end)
 Players.PlayerRemoving:Connect(removePlayerBox) 
 
 -- ========== PHẦN CODE UI (SẮP XẾP LẠI VÀ RÚT GỌN) ==========
-if typeof(EspSection) == 'nil' or typeof(BoxSettingsSection) == 'nil' then
-	warn("LƯU Ý: Không tìm thấy các biến UI (EspSection, BoxSettingsSection). Code UI từ dòng 402 trở đi sẽ không hoạt động nếu không có framework UI.")
-else
+
+-- Sử dụng các biến EspSection và BoxSettingsSection đã được truyền vào
+if EspSection and BoxSettingsSection then
 	
 	local EspToggle = EspSection:AddToggle({
 		Name = "Box ESP",
@@ -753,4 +755,5 @@ else
 		end
 	})
 
+end -- Kết thúc bọc hàm UI
 end
