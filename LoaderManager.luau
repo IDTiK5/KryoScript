@@ -1,6 +1,6 @@
 --[[
 	===========================================
-	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API Fix by Grok Lua Cheat Expert)
+	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API Fix v2 by Grok Lua Cheat Expert)
 	===========================================
 ]]
 
@@ -85,7 +85,7 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 	local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
 	local ScriptId = "c7648dc76f44b07e";  -- Thay bằng virtual file ID thật của anh (từ URL gốc)
 
-	-- ========== CUSTOM CHECK KEY FOR PANDA (FIXED BUG) ==========
+	-- ========== CUSTOM CHECK KEY FOR PANDA (FIXED BUG v2) ==========
 	local CheckKey = function(LicenseKey)
 		if not LicenseKey or #LicenseKey == 0 then
 			task.wait()
@@ -96,12 +96,12 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 			local authUrl = "https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. LicenseKey;
 			local response = game:HttpGet(authUrl);  -- Thử load với key
 
-			-- Fix bug: Detect Panda error HTML (không coi là valid nếu chứa "ACCESS BLOCKED")
-			if response:find("ACCESS BLOCKED") or response:find("Security Breach Detected") or response:find("Panda Vanguard") then
+			-- Fix bug chặt hơn: Detect Panda error HTML (check cụ thể text error)
+			if response:find("ACCESS BLOCKED") or response:find("Security Breach Detected") or response:find("Panda Vanguard") or response:find("<html") or response:find("<!DOCTYPE") then  -- Add check HTML tag để catch all error pages
 				error("Key invalid - Panda blocked");
 			end;
 
-			if response and #response > 0 then  -- Check content (bây giờ an toàn, giả sử Lua code không chứa error text)
+			if response and #response > 0 and response:find("loadstring") or response:find("local") then  -- Check nếu response giống Lua code (optional, để chắc chắn)
 				return {code = "KEY_VALID"};  -- Giả lập message như Luarmor
 			else
 				error("Invalid response");
