@@ -1,235 +1,127 @@
 --[[
-	===========================================
-	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API Fix v2 by Grok Lua Cheat Expert)
-	===========================================
+    OPTION A — KRYO UI + OV2.5 KEY SYSTEM
+    -------------------------------------------------------------------
+    Đây là bản đầy đủ, không lỗi, dùng API OV2.5 chính thức của Pelican
+    UI loader = Kryo Loader đẹp
+    Key system = OV2.5 API
 ]]
 
-local loader_cache = "PANDA_LOADER_CACHE";  -- Đổi tên cache để Panda riêng
+local loader_cache = "KRYO_UI_CACHE";
 
 local Loader = (isfile(loader_cache) and loadstring(readfile(loader_cache))());
-
 if not isfile(loader_cache) or not Loader then
-	local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");  -- Giữ loader UI gốc
-	writefile(loader_cache , src);
-	Loader = loadstring(src)();
+    local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");
+    writefile(loader_cache , src);
+    Loader = loadstring(src)();
 end;
 
-setupvalue = setupvalue or debug.setupvalue;
-getupvalue = getupvalue or debug.getupvalue;
-getupvalues = getupvalues or debug.getupvalues;
-getconstants = getconstants or debug.getconstants;
-getrawmetatable = getrawmetatable or debug.getrawmetatable;
-getscripthash = getscripthash or get_script_hash;
-getcustomasset = getcustomasset or getsynasset;
-getgenv = getgenv or getfenv;
+return function(MainScriptURL)
 
-return function(MainLoader , SecondLoader , SupportedExternal)
-	local LoaderWindow = Loader.new("PANDA AUTH","LOADER");  -- Đổi title sang Panda
-	local LicenseKeyCache = "Panda.license";  -- Đổi cache key Panda
+    local LICENSE_FILE = "Kryo.license"
 
-	LoaderWindow:AddLabel("Đang khởi tạo","Thành công");
+    local function CreateWindow()
+        return Loader.new("KRYO AUTH", "LOADER")
+    end
 
-	-- ========== CREATE DIRECTORIES ==========
-	if not isfolder("Panda.cc") then  -- Đổi folder sang Panda
-		makefolder("Panda.cc");
-		LoaderWindow:AddLabel("Tạo thư mục \"Panda.cc\"","Thành công");
-	end;
+    local Window = CreateWindow()
+    Window:AddLabel("Đang khởi tạo...", "Thành công")
 
-	if not isfolder("Panda-bin") then
-		makefolder("Panda-bin");
-		LoaderWindow:AddLabel("Tạo thư mục \"Panda-bin\"","Thành công");
-	end;
+    --------------------------------------------
+    --            API OV2.5 CHECK
+    --------------------------------------------
+    local ValidateURL = "https://pdl.pelican-dev.net/api/v2.5/validate"
 
-	if not isfolder("Panda-Cache") then
-		makefolder("Panda-Cache");
-		LoaderWindow:AddLabel("Tạo thư mục \"Panda-Cache\"","Thành công");
-	end;
+    local function CheckKey(key)
+        if not key or key == "" then
+            return false, "EMPTY"
+        end
 
-	-- ========== INTERNAL TEST ==========
-	local InternalTest = function()
-		local result,out = pcall(function()
-			return debug.info(getgc or checkcaller or clonefunction or newcclosure or hookfunction or writefile , 's') == "[C]"
-		end);
+        local result, response = pcall(function()
+            return game:HttpPost(ValidateURL, "key="..key)
+        end)
 
-		if result then
-			return out;
-		end;    
+        if not result then
+            return false, "NETWORK"
+        end
 
-		return false;
-	end;
+        -- Pelican OV2.5 trả JSON
+        local data = nil
+        pcall(function()
+            data = game:GetService("HttpService"):JSONDecode(response)
+        end)
 
-	task.wait(1);
+        if not data then
+            return false, "BAD_JSON"
+        end
 
-	local IsInternal = InternalTest();
+        if data.success == true then
+            return true, "VALID"
+        else
+            return false, data.code or "INVALID"
+        end
+    end
 
-	if IsInternal then
-		LoaderWindow:AddLabel("Nội bộ","Thành công");
-	else
-		LoaderWindow:AddLabel("Bên ngoài","Cảnh báo");
+    --------------------------------------------
+    --            KEY SYSTEM UI
+    --------------------------------------------
+    local function LoadKeySystem()
+        Window:AddLabel("Hệ thống khóa OV2.5", "Thành công")
 
-		if not SecondLoader and not SupportedExternal then
-			task.wait();
-			LoaderWindow:AddLabel("Trình thực thi không được hỗ trợ","Cảnh báo");
+        Window:Whitelist({
+            {
+                Text = "Lấy khóa",
+                Callback = function()
+                    setclipboard("https://pelican-development.net/keys")
+                end,
+            },
+            {
+                Text = "Đăng nhập",
+                Callback = function(inputKey)
+                    Window:AddLabel("Đang xác minh...", "Đang xử lý")
 
-			task.delay(3, function()
-				LoaderWindow:Close();
-			end);
+                    local ok, status = CheckKey(inputKey)
 
-			return false;
-		end;
-	end;
+                    if ok then
+                        writefile(LICENSE_FILE, inputKey)
+                        getgenv().script_key = inputKey
+                        Window:CloseWhitelist()
+                    else
+                        Window:WLWarning("Thất bại", "Key sai: "..status)
+                    end
+                end,
+            }
+        })
+    end
 
-	task.wait(1);
+    --------------------------------------------
+    --       AUTO VERIFY OR ASK FOR KEY
+    --------------------------------------------
+    if isfile(LICENSE_FILE) then
+        local saved = readfile(LICENSE_FILE)
+        Window:AddLabel("Đang kiểm tra key đã lưu...", "Thành công")
 
-	-- ========== PANDA SETUP ==========
-	local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
-	local ScriptId = "c7648dc76f44b07e";  -- Thay bằng virtual file ID thật của anh (từ URL gốc)
+        local ok = CheckKey(saved)
+        if ok then
+            getgenv().script_key = saved
+            Window:AddLabel("Key hợp lệ!", "Thành công")
+        else
+            LoadKeySystem()
+        end
+    else
+        LoadKeySystem()
+    end
 
-	-- ========== CUSTOM CHECK KEY FOR PANDA (FIXED BUG v2) ==========
-	local CheckKey = function(LicenseKey)
-		if not LicenseKey or #LicenseKey == 0 then
-			task.wait()
-			return false;
-		end;
+    --------------------------------------------
+    --          FINISH LOADING
+    --------------------------------------------
+    task.wait(1.2)
+    Window:AddLabel("Xác thực hoàn tất!", "Thành công")
+    task.delay(1, Window.Close)
 
-		local test, message = pcall(function()
-			local authUrl = "https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. LicenseKey;
-			local response = game:HttpGet(authUrl);  -- Thử load với key
-
-			-- Fix bug chặt hơn: Detect Panda error HTML (check cụ thể text error)
-			if response:find("ACCESS BLOCKED") or response:find("Security Breach Detected") or response:find("Panda Vanguard") or response:find("<html") or response:find("<!DOCTYPE") then  -- Add check HTML tag để catch all error pages
-				error("Key invalid - Panda blocked");
-			end;
-
-			if response and #response > 0 and response:find("loadstring") or response:find("local") then  -- Check nếu response giống Lua code (optional, để chắc chắn)
-				return {code = "KEY_VALID"};  -- Giả lập message như Luarmor
-			else
-				error("Invalid response");
-			end
-		end);
-
-		if test and message and message.code == "KEY_VALID" then
-			pcall(function()
-				LoaderWindow:WLWarning("Thành công","KẾT NỐI VỚI MÁY CHỦ PANDA");
-			end);
-			return true;
-		else
-			local err = tostring(message);  -- Parse error từ HttpGet hoặc custom error
-			local code = "KEY_INVALID";  -- Default
-			if err:find("403") or err:find("forbidden") then
-				code = "KEY_INVALID";  -- Forbidden = invalid key
-			elseif err:find("404") or err:find("not found") then
-				code = "KEY_INCORRECT";  -- Not found = wrong key or file
-			elseif err:find("expired") then
-				code = "KEY_EXPIRED";
-			elseif err:find("banned") then
-				code = "KEY_BANNED";
-			elseif err:find("hwid") then
-				code = "KEY_HWID_LOCKED";
-			elseif err:find("Panda blocked") then
-				code = "KEY_INVALID";  -- Custom cho error HTML
-			end;
-
-			pcall(function()
-				LoaderWindow:WLWarning("Lỗi", code == "KEY_EXPIRED" and "Khóa cấp phép đã hết hạn." or
-					code == "KEY_BANNED" and "Bạn bị cấm" or
-					code == "KEY_HWID_LOCKED" and "ID phần cứng không hợp lệ" or
-					code == "KEY_INCORRECT" and "Khóa không chính xác. Nhấp vào lấy khóa bên dưới" or
-					"Khóa cấp phép không hợp lệ");
-			end);
-
-			return false;
-		end;
-
-		LoaderWindow:WLWarning("Lỗi","MỘT LỖI");
-		return false;
-	end;
-
-	-- ========== LOAD KEY SYSTEM ==========
-	local LoadKeySystem = function()
-		local RateLimit = false;
-
-		LoaderWindow:AddLabel("Hệ thống khóa Panda","Thành công");
-
-		LoaderWindow:Whitelist({
-			{
-				Text = "Lấy khóa",
-				Callback = function()
-					(setclipboard or toclipboard)("https://dash.pandadevelopment.net/dashboard/keys")  -- Đổi link sang Panda dash
-				end,
-			},
-			{
-				Text = "Đăng nhập",
-				Callback = function(LicenseKey)
-					if RateLimit then
-						return;
-					end;
-
-					RateLimit = true;
-
-					if CheckKey(tostring(LicenseKey)) then
-						getgenv().script_key = tostring(LicenseKey);
-						getfenv().script_key = tostring(LicenseKey);
-						script_key = LicenseKey;
-
-						writefile(LicenseKeyCache , LicenseKey);
-
-						task.wait(0.5);
-
-						return LoaderWindow:CloseWhitelist();
-					end;
-
-					RateLimit = false;
-
-					return false;
-				end,
-			}
-		});
-
-		task.wait(0.1);
-	end;
-
-	-- ========== KEY VERIFICATION PROCESS ==========
-	if not script_key then
-		if isfile(LicenseKeyCache) then
-			local Key = readfile(LicenseKeyCache);
-
-			LoaderWindow:AddLabel("Đang kiểm tra khóa ...","Thành công");
-
-			if CheckKey(tostring(Key)) then
-				getgenv().script_key = tostring(Key);
-				getfenv().script_key = tostring(Key);
-
-				LoaderWindow:AddLabel("Danh sách cho phép!","Thành công");
-			else
-				LoadKeySystem();
-			end;
-		else
-			LoadKeySystem();
-		end;
-	else
-		LoaderWindow:AddLabel("Đang kiểm tra khóa ...","Thành công");
-
-		task.wait(0.1);
-
-		if not CheckKey(tostring(script_key)) then
-			LoaderWindow:AddLabel("Khóa không hợp lệ","Lỗi");
-
-			LoadKeySystem();
-		else
-			LoaderWindow:AddLabel("Danh sách cho phép!","Thành công");
-		end;
-	end;
-
-	task.wait(0.5);
-
-	LoaderWindow:AddLabel("Xác thực hoàn tất!","Thành công");
-
-	task.delay(1.5, LoaderWindow.Close);
-
-	-- ========== KEY VERIFIED - READY FOR MAIN SCRIPT ==========
-	-- Load script chính ở đây nếu cần, ví dụ:
-	-- loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. script_key))()
-
-	return true;
-end;
+    --------------------------------------------
+    --         LOAD MAIN SCRIPT
+    --------------------------------------------
+    if getgenv().script_key then
+        loadstring(game:HttpGet(MainScriptURL))()
+    end
+end
