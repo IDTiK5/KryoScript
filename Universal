@@ -1,0 +1,1839 @@
+--[Nhập thư viện]
+local Compkiller = loadstring(game:HttpGet("https://raw.githubusercontent.com/IDTiK5/KryoScript/refs/heads/main/KryoLoader"))();
+--[Trình quản lý cấu hình]
+local ConfigManager = Compkiller:ConfigManager({
+	Directory = "Compkiller-UI",
+	Config = "Example-Configs",
+});
+
+Compkiller:OptimizeMode(true)  -- Nil hidden elements, skip heavy tweens → FPS 60+ với 100 elements
+Compkiller:Security("Kryo-UI", {BlurEnabled = false})  -- Tắt blur nếu lag (optional)
+Compkiller:SetTheme("Skeet")  -- Theme cyan Skeet y chang CS:GO
+Compkiller:PreloadIcons()  -- Cache icons 1 lần
+Compkiller:CacheImage("rbxassetid://120245531583106", "kryo_logo")  -- Logo mày local
+
+-- GC loop light (mỗi 30s)
+task.spawn(function()
+    while true do
+        task.wait(30)
+        collectgarbage("collect")
+    end
+end)
+
+--[Hoạt ảnh đang tải] (Bật splash 2.5s beast)
+--Compkiller:Loader("rbxassetid://120245531583106", 2.5).yield();
+
+--[Tạo cửa sổ]
+local Window = Compkiller.new({
+	Name = "Kryo Universal",
+	Keybind = "LeftAlt",
+	Logo = "rbxassetid://120245531583106",
+	TextSize = 15,
+	Scale = UDim2.new(0, 470, 0, 450),
+	Position = UDim2.new(0.5, 40, 0.5, 20),
+	ExpireDate = "Free"
+});
+
+Window:Update({
+	ExpireDate = "Free",
+	WindowName = "Kryo Universal"
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+--[Tạo danh mục tab]
+Window:DrawCategory({
+	Name = "Tính Năng Chính"
+});
+
+--[Tạo tab vùng chứa]
+local EspTab = Window:DrawContainerTab({
+	Name = "Địng vị",
+	Icon = "lucide-eye",
+});
+
+local AimTab = Window:DrawContainerTab({
+	Name = "Tự ngắm",
+	Icon = "lucide-crosshair",
+});
+
+Window:DrawCategory({
+	Name = "Người Chơi"
+});
+
+local PlayerTab = Window:DrawContainerTab({
+	Name = "Nhân vật",
+	Icon = "lucide-user",
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+--[Double] [Single]
+--[Tạo tab] (Thông thường)
+local Player = EspTab:DrawTab({
+	Name = "Người chơi",
+	Type = "Single",
+});
+
+local Model = EspTab:DrawTab({
+	Name = "Quái",
+	Type = "Single"
+});
+
+local World = EspTab:DrawTab({
+	Name = "Vật phẩm",
+	Type = "Single"
+});
+
+--[Tạo tab] (đơn)
+local Setting = EspTab:DrawTab({
+	Name = "Cài đặt",
+	Type = "Double",
+	EnableScrolling = true,
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local AimbotPlayer = AimTab:DrawTab({
+	Name = "Tự ngắm người chơi",
+	Type = "Single",
+});
+
+local AimbotModel = AimTab:DrawTab({
+	Name = "Tự ngắm quái",
+	Type = "Single",
+});
+
+local SettingAimbotPlayer = AimTab:DrawTab({
+	Name = "Cài đặt tự ngắm",
+	Type = "Double",
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+--[Tạo phần]
+local EspPlayer = Player:DrawSection({
+	Name = "Chính",
+	Position = 'left'
+});
+
+local EspModel = Model:DrawSection({
+	Name = "Chính",
+	Position = 'left'
+});
+
+local EspWorld = World:DrawSection({
+	Name = "Chính",
+	Position = 'left'
+});
+
+local SettingPlayerPos = Setting:DrawSection({
+	Name = "Tùy chỉnh địng vị người chơi",
+	Position = 'left'
+});
+
+local SettingPlayerColor = Setting:DrawSection({
+	Name = "Màu địng vị người chơi",
+	Position = 'right'
+});
+
+local SettingMonsterPos = Setting:DrawSection({
+	Name = "Tùy chỉnh địng vị quái",
+	Position = 'left'
+});
+
+local SettingMonsterColor = Setting:DrawSection({
+	Name = "Màu địng vị quái",
+	Position = 'right'
+});
+
+local SettingItemPos = Setting:DrawSection({
+	Name = "Tùy chỉnh địng vị vật phẩm",
+	Position = 'left'
+});
+
+local SettingItemColor = Setting:DrawSection({
+	Name = "Màu địng vị vật phẩm",
+	Position = 'right'
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
+local cam = workspace.CurrentCamera
+
+-- Biến lưu trạng thái bật/tắt của Thanh Máu.
+local HEALTH_BAR_ENABLED = false
+-- Biến lưu trạng thái bật/tắt của Distance Text.
+local DISTANCE_TEXT_ENABLED = false
+-- Biến lưu trạng thái bật/tắt của Team Check (Lọc đồng đội).
+local TEAM_CHECK_ENABLED = false 
+
+-- Khai báo CONFIG để hàm isOnSameTeam hoạt động
+local CONFIG = {
+    teamFilterMode = "standard" 
+}
+
+-- Hàm kiểm tra xem hai người chơi có cùng đội hay không
+local function isOnSameTeam(player1, player2)
+    if not player1 or not player2 or not player1.Character or not player2.Character then
+        return false
+    end
+    
+    if CONFIG.teamFilterMode == "standard" then
+        return player1.Team ~= nil and player1.Team == player2.Team
+    else
+        if player1.Team ~= nil and player1.Team == player2.Team then
+            return true
+        end
+        local success1, attribute1 = pcall(function()
+            return player1.Character:GetAttribute("Team")
+        end)
+        local success2, attribute2 = pcall(function()
+            return player2.Character:GetAttribute("Team")
+        end)
+        
+        if success1 and success2 and attribute1 ~= nil and attribute1 == attribute2 then
+            return true
+        end
+        
+        return false
+    end
+end
+
+local HealthToggle = EspPlayer:AddToggle({
+Name = "Thanh Máu",
+Flag = "Nút_ThanhMáu",
+Default = false,
+Callback = function(state)
+HEALTH_BAR_ENABLED = state
+if not state then
+for _, data in pairs(espData) do
+hideESP(data)
+end
+end
+end,
+})
+
+local DistanceToggle = EspPlayer:AddToggle({
+Name = "Khoảng Cách",
+Flag = "Nút_KhoảngCách",
+Default = false,
+Callback = function(state)
+DISTANCE_TEXT_ENABLED = state
+end,
+})
+ 
+local TeamCheckToggle = SettingPlayerPos:AddToggle({
+Name = "Lọc Đồng Đội",
+Flag = "Nút_LọcĐồngĐội",
+Default = false,
+Callback = function(state)
+TEAM_CHECK_ENABLED = state
+end,
+})
+
+local C = {
+    barWidth = 60,
+    barHeight = 2,
+    outlineSize = 1,
+    lerpSpeed = 0.1,
+    maxDistance = 5000,
+    positionOffsetX = 0,
+    positionOffsetY = 0,
+    healthTextOffsetX = 0,
+    healthTextOffsetY = -15,
+    distanceTextOffsetX = -2,
+    distanceTextOffsetY = 0
+}
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local espData = {}
+
+local function createESP(player)
+    if player == lp then return end
+    
+    local outline = Drawing.new("Square")
+    outline.Filled = true
+    outline.Color = Color3.new(0, 0, 0)
+    outline.Visible = false
+    outline.ZIndex = 1
+    
+    local bgBar = Drawing.new("Square")
+    bgBar.Filled = true
+    bgBar.Color = Color3.new(0.2, 0.2, 0.2)
+    bgBar.Visible = false
+    bgBar.ZIndex = 2
+    
+    local healthBar = Drawing.new("Square")
+    healthBar.Filled = true
+    healthBar.Color = Color3.new(0, 1, 0)
+    healthBar.Visible = false
+    healthBar.ZIndex = 3
+    
+    local healthText = Drawing.new("Text")
+    healthText.Center = false
+    healthText.Outline = true
+    healthText.Color = Color3.fromRGB(255, 255, 255)
+    healthText.Font = 3
+    healthText.Size = 13
+    healthText.Visible = false
+    
+    local distanceText = Drawing.new("Text")
+    distanceText.Center = false
+    distanceText.Outline = true
+    distanceText.Color = Color3.fromRGB(255, 255, 255)
+    distanceText.Font = 3
+    distanceText.Size = 13
+    distanceText.Visible = false
+    
+    espData[player] = {
+        outline = outline,
+        bgBar = bgBar,
+        healthBar = healthBar,
+        healthText = healthText,
+        distanceText = distanceText,
+        smoothHealth = 1,
+        lastHealth = 100
+    }
+end
+
+local function removeESP(player)
+    local data = espData[player]
+    if data then
+        if data.outline then data.outline:Remove() end
+        if data.bgBar then data.bgBar:Remove() end
+        if data.healthBar then data.healthBar:Remove() end
+        if data.healthText then data.healthText:Remove() end
+        if data.distanceText then data.distanceText:Remove() end
+        espData[player] = nil
+    end
+end
+
+local function hideESP(data)
+    data.outline.Visible = false
+    data.bgBar.Visible = false
+    data.healthBar.Visible = false
+    data.healthText.Visible = false
+    data.distanceText.Visible = false
+end
+
+local function lerp(current, target, speed)
+    return current + (target - current) * speed
+end
+
+for _, player in Players:GetPlayers() do
+    createESP(player)
+end
+
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(removeESP)
+
+RunService.RenderStepped:Connect(function()
+    -- KIỂM TRA TOGGLE THANH MÁU
+    if not HEALTH_BAR_ENABLED and not DISTANCE_TEXT_ENABLED then
+        for _, data in pairs(espData) do
+            hideESP(data)
+        end
+        return
+    end
+
+    local myChar = lp.Character
+    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return end
+    if not cam or not cam.Parent then return end
+    
+    local myPos = myChar.HumanoidRootPart.Position
+    
+    for player, data in pairs(espData) do
+        local character = player.Character
+        if not character then
+            hideESP(data)
+            continue
+        end
+        
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        local head = character:FindFirstChild("Head")
+        local root = character:FindFirstChild("HumanoidRootPart")
+        
+        -- Kiểm tra cơ bản
+        if not humanoid or not head or not root or humanoid.Health <= 0 then
+            hideESP(data)
+            continue
+        end
+
+        -- KIỂM TRA LỌC ĐỒNG ĐỘI
+        if TEAM_CHECK_ENABLED and isOnSameTeam(lp, player) then
+            hideESP(data)
+            continue
+        end
+        
+        local dist = (root.Position - myPos).Magnitude
+        if dist > C.maxDistance then
+            hideESP(data)
+            continue
+        end
+        
+        -- Tính vị trí đầu và chân
+        local headTopPos = head.Position + Vector3.new(0, head.Size.Y / 2 + 0.5, 0)
+        local rootCenterPos = root.Position
+        local footPos = root.Position - Vector3.new(0, 3, 0)
+        
+        local headVec, headOnScreen = cam:WorldToViewportPoint(headTopPos)
+        local rootVec, rootOnScreen = cam:WorldToViewportPoint(rootCenterPos)
+        local footVec, footOnScreen = cam:WorldToViewportPoint(footPos)
+        
+        if not headOnScreen or not rootOnScreen or not footOnScreen or not headVec or not rootVec or not footVec then
+            hideESP(data)
+            continue
+        end
+        
+        local healthPercent = humanoid.Health / humanoid.MaxHealth
+        data.smoothHealth = lerp(data.smoothHealth, healthPercent, C.lerpSpeed)
+        
+        -- Health bar nằm ngang trên đầu
+        if HEALTH_BAR_ENABLED then
+            local barCenterX = rootVec.X
+            local barY = headVec.Y + C.positionOffsetY
+            
+            local barLeft = barCenterX - (C.barWidth / 2)
+            
+            -- Outline
+            local outlineX = barLeft - C.outlineSize
+            local outlineY = barY - C.outlineSize
+            local outlineW = C.barWidth + (C.outlineSize * 2)
+            local outlineH = C.barHeight + (C.outlineSize * 2)
+            
+            data.outline.Position = Vector2.new(outlineX, outlineY)
+            data.outline.Size = Vector2.new(outlineW, outlineH)
+            data.outline.Visible = true
+            
+            -- Background bar
+            data.bgBar.Position = Vector2.new(barLeft, barY)
+            data.bgBar.Size = Vector2.new(C.barWidth, C.barHeight)
+            data.bgBar.Visible = true
+            
+            -- Health bar (nằm ngang, phần xanh từ trái qua phải)
+            local healthWidth = C.barWidth * data.smoothHealth
+            data.healthBar.Position = Vector2.new(barLeft, barY)
+            data.healthBar.Size = Vector2.new(healthWidth, C.barHeight)
+            data.healthBar.Color = Color3.new(0, 1, 0)
+            data.healthBar.Visible = true
+            
+            -- Text %
+            local healthTextPercent = math.floor(data.smoothHealth * 100)
+            data.healthText.Text = healthTextPercent .. "%"
+            data.healthText.Position = Vector2.new(barLeft + C.healthTextOffsetX, barY + C.healthTextOffsetY)
+            data.healthText.Visible = true
+        else
+            data.outline.Visible = false
+            data.bgBar.Visible = false
+            data.healthBar.Visible = false
+            data.healthText.Visible = false
+        end
+        
+        -- Khoảng cách (giữa 2 chân)
+        if DISTANCE_TEXT_ENABLED then
+            local distance = math.floor((root.Position - myPos).Magnitude)
+            data.distanceText.Text = distance .. "m"
+            data.distanceText.Position = Vector2.new(footVec.X + C.distanceTextOffsetX, footVec.Y + C.distanceTextOffsetY)
+            data.distanceText.Visible = true
+        else
+            data.distanceText.Visible = false
+        end
+    end
+end)
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local EspState = {
+	config = {
+		enabled = false,
+		box3D = false,
+		asyncUpdate = true,
+		teamFilter = false,
+		maxDistance = 5000,
+		raycastCheck = false,
+		fadeWhenBlocked = false,
+		teamFilterMode = "standard",
+		teamColor = false,
+		boxColor = Color3.new(1, 180, 235),
+		thickness = 2,
+		transparency = 0.8
+	},
+	playerBoxes = {},
+	linePool = {},
+	poolSize = 0,
+	maxPoolSize = 600
+}
+
+local BoxToggle = EspPlayer:AddToggle({
+		Name = "Hộp",
+		Flag = "Nút_Hộp",
+		Default = false,
+		Risky = false,
+		Callback = function(value)
+			EspState.config.enabled = value
+		end
+	})
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local function isSameTeam(player1, player2)
+	if not player1 or not player2 or not player1.Character or not player2.Character then 
+		return false 
+	end
+	
+	if EspState.config.teamFilterMode == "standard" then
+		return player1.Team ~= nil and player1.Team == player2.Team
+	else
+		if player1.Team ~= nil and player1.Team == player2.Team then 
+			return true 
+		end
+		local success1, attribute1 = pcall(function() 
+			return player1.Character:GetAttribute("Team") 
+		end)
+		local success2, attribute2 = pcall(function() 
+			return player2.Character:GetAttribute("Team") 
+		end)
+		return success1 and success2 and attribute1 ~= nil and attribute1 == attribute2
+	end
+end
+
+local function shouldShowPlayer(player)
+	if player == LocalPlayer or not EspState.config.enabled then 
+		return false 
+	end
+	
+	local character = player.Character
+	if not character or not character:FindFirstChild("HumanoidRootPart") then 
+		return false 
+	end
+	
+	local localCharacter = LocalPlayer.Character
+	if not localCharacter or not localCharacter:FindFirstChild("HumanoidRootPart") then 
+		return false 
+	end
+	
+	local distance = (character.HumanoidRootPart.Position - localCharacter.HumanoidRootPart.Position).Magnitude
+	if distance > EspState.config.maxDistance then 
+		return false 
+	end
+	
+	if EspState.config.teamFilter and isSameTeam(LocalPlayer, player) then 
+		return false 
+	end
+	
+	return true
+end
+
+local function isBlockedByWall(targetPosition, targetCharacter, originPosition)
+	if not EspState.config.raycastCheck then 
+		return false 
+	end
+	
+	local localCharacter = LocalPlayer.Character
+	if not localCharacter then 
+		return true 
+	end
+	
+	local distance = (targetPosition - originPosition).Magnitude
+	local rayDirection = (targetPosition - originPosition).Unit * distance
+	local raycastParameters = RaycastParams.new()
+	raycastParameters.FilterType = Enum.RaycastFilterType.Blacklist
+	raycastParameters.FilterDescendantsInstances = {LocalPlayer.Character, targetCharacter}
+	
+	local raycastResult = Workspace:Raycast(originPosition, rayDirection, raycastParameters)
+	if not raycastResult then 
+		return false 
+	end
+	
+	return (raycastResult.Position - originPosition).Magnitude < distance
+end
+
+local function calculate2DBox(character)
+	if not character or not character.Parent then 
+		return nil 
+	end
+	
+	local rootPart = character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character:FindFirstChild("Humanoid")
+	local head = character:FindFirstChild("Head")
+	
+	if not rootPart or not humanoid or humanoid.Health <= 0 or not head then 
+		return nil 
+	end
+	
+	local topPosition = head.Position + Vector3.new(0, head.Size.Y / 2, 0)
+	local bottomPosition = rootPart.Position - Vector3.new(0, 3, 0)
+	local topScreen, bottomScreen, centerScreen = Camera:WorldToViewportPoint(topPosition), Camera:WorldToViewportPoint(bottomPosition), Camera:WorldToViewportPoint(rootPart.Position)
+	
+	if topScreen.Z <= 0 or bottomScreen.Z <= 0 then 
+		return nil 
+	end
+	
+	local screenHeight = math.abs(topScreen.Y - bottomScreen.Y)
+	local screenWidth = screenHeight * 0.6
+	local centerX = centerScreen.X
+	
+	return {
+		TopLeft = Vector2.new(centerX - screenWidth / 2, topScreen.Y),
+		TopRight = Vector2.new(centerX + screenWidth / 2, topScreen.Y),
+		BottomLeft = Vector2.new(centerX - screenWidth / 2, bottomScreen.Y),
+		BottomRight = Vector2.new(centerX + screenWidth / 2, bottomScreen.Y)
+	}
+end
+
+local function calculate3DBox(character)
+	if not character or not character.Parent then 
+		return nil 
+	end
+	
+	local humanoid = character:FindFirstChild("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then 
+		return nil 
+	end
+	
+	local minX, maxX, minY, maxY, minZ, maxZ = math.huge, -math.huge, math.huge, -math.huge, math.huge, -math.huge
+	
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			local position = part.Position
+			local size = part.Size
+			minX = math.min(minX, position.X - size.X / 2)
+			maxX = math.max(maxX, position.X + size.X / 2)
+			minY = math.min(minY, position.Y - size.Y / 2)
+			maxY = math.max(maxY, position.Y + size.Y / 2)
+			minZ = math.min(minZ, position.Z - size.Z / 2)
+			maxZ = math.max(maxZ, position.Z + size.Z / 2)
+		end
+	end
+	
+	if minX == math.huge then 
+		return nil 
+	end
+	
+	local corners = {
+		Vector3.new(minX, minY, minZ), Vector3.new(maxX, minY, minZ), Vector3.new(maxX, minY, maxZ), Vector3.new(minX, minY, maxZ),
+		Vector3.new(minX, maxY, minZ), Vector3.new(maxX, maxY, minZ), Vector3.new(maxX, maxY, maxZ), Vector3.new(minX, maxY, maxZ)
+	}
+	
+	local screenCorners = {}
+	for index, corner in ipairs(corners) do
+		local screenPoint = Camera:WorldToViewportPoint(corner)
+		if screenPoint.Z <= 0 then 
+			return nil 
+		end
+		screenCorners[index] = Vector2.new(screenPoint.X, screenPoint.Y)
+	end
+	
+	return screenCorners
+end
+
+local function getLineFromPool()
+	if EspState.poolSize > 0 then
+		local line = EspState.linePool[EspState.poolSize]
+		EspState.linePool[EspState.poolSize] = nil
+		EspState.poolSize = EspState.poolSize - 1
+		return line
+	end
+	
+	local newLine = Drawing.new("Line")
+	newLine.Thickness = EspState.config.thickness
+	newLine.Color = EspState.config.boxColor
+	newLine.Transparency = EspState.config.transparency
+	return newLine
+end
+
+local function returnLineToPool(line)
+	if EspState.poolSize < EspState.maxPoolSize then
+		line.Visible = false
+		EspState.poolSize = EspState.poolSize + 1
+		EspState.linePool[EspState.poolSize] = line
+	else
+		line:Remove()
+	end
+end
+
+local function setLineProperties(line, fromPosition, toPosition, color, transparency)
+	line.From = fromPosition
+	line.To = toPosition
+	line.Color = color
+	line.Thickness = EspState.config.thickness
+	line.Transparency = transparency or EspState.config.transparency
+	line.Visible = true
+end
+
+local function updatePlayerBox(player)
+	if not shouldShowPlayer(player) then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+				returnLineToPool(line) 
+			end
+			EspState.playerBoxes[player] = nil
+		end
+		return
+	end
+	
+	local character = player.Character
+	if not character then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+				line.Visible = false 
+			end
+		end
+		return
+	end
+	
+	local targetPosition = character.HumanoidRootPart.Position
+	local originPosition = LocalPlayer.Character.HumanoidRootPart.Position
+	local blocked = isBlockedByWall(targetPosition, character, originPosition)
+	
+	if blocked and not EspState.config.fadeWhenBlocked then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+				line.Visible = false 
+			end
+		end
+		return
+	end
+	
+	local boxPoints = EspState.config.box3D and calculate3DBox(character) or calculate2DBox(character)
+	if not boxPoints then
+		if EspState.playerBoxes[player] then
+			for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+				line.Visible = false 
+			end
+		end
+		return
+	end
+	
+	if not EspState.playerBoxes[player] then
+		EspState.playerBoxes[player] = {Lines = {}}
+		local lineCount = EspState.config.box3D and 12 or 4
+		for index = 1, lineCount do 
+			table.insert(EspState.playerBoxes[player].Lines, getLineFromPool()) 
+		end
+	end
+	
+	local color = EspState.config.teamColor and (player.Team and player.Team.TeamColor.Color) or EspState.config.boxColor
+	local transparency = EspState.config.fadeWhenBlocked and blocked and 0.4 or EspState.config.transparency
+	
+	if not EspState.config.box3D then
+		setLineProperties(EspState.playerBoxes[player].Lines[1], boxPoints.TopLeft, boxPoints.TopRight, color, transparency)
+		setLineProperties(EspState.playerBoxes[player].Lines[2], boxPoints.TopRight, boxPoints.BottomRight, color, transparency)
+		setLineProperties(EspState.playerBoxes[player].Lines[3], boxPoints.BottomRight, boxPoints.BottomLeft, color, transparency)
+		setLineProperties(EspState.playerBoxes[player].Lines[4], boxPoints.BottomLeft, boxPoints.TopLeft, color, transparency)
+	else
+		if #boxPoints == 8 then
+			local lineIndex = 1
+			-- Bottom face (4 lines)
+			for index = 1, 4 do
+				local nextIndex = (index % 4) + 1
+				if boxPoints[index] and boxPoints[nextIndex] then
+					setLineProperties(EspState.playerBoxes[player].Lines[lineIndex], boxPoints[index], boxPoints[nextIndex], color, transparency)
+					lineIndex = lineIndex + 1
+				end
+			end
+			-- Top face (4 lines)
+			for index = 5, 8 do
+				local nextIndex = ((index - 4) % 4) + 5
+				if boxPoints[index] and boxPoints[nextIndex] then
+					setLineProperties(EspState.playerBoxes[player].Lines[lineIndex], boxPoints[index], boxPoints[nextIndex], color, transparency)
+					lineIndex = lineIndex + 1
+				end
+			end
+			-- Vertical lines (4 lines)
+			for index = 1, 4 do
+				if boxPoints[index] and boxPoints[index + 4] then
+					setLineProperties(EspState.playerBoxes[player].Lines[lineIndex], boxPoints[index], boxPoints[index + 4], color, transparency)
+					lineIndex = lineIndex + 1
+				end
+			end
+		end
+	end
+end
+
+local function updateAllPlayers()
+	local playerBatch = {}
+	for _, player in ipairs(Players:GetPlayers()) do
+		if player ~= LocalPlayer then 
+			table.insert(playerBatch, player) 
+		end
+	end
+	
+	if EspState.config.asyncUpdate and #playerBatch > 5 then
+		task.spawn(function()
+			for _, player in ipairs(playerBatch) do 
+				updatePlayerBox(player) 
+			end
+		end)
+	else
+		for _, player in ipairs(playerBatch) do 
+			updatePlayerBox(player) 
+		end
+	end
+end
+
+local function hideAllBoxes()
+	for player, data in pairs(EspState.playerBoxes) do
+		if data and data.Lines then
+			for _, line in ipairs(data.Lines) do 
+				line.Visible = false 
+			end
+		end
+	end
+end
+
+local function removePlayerBox(player)
+	if EspState.playerBoxes[player] then
+		for _, line in ipairs(EspState.playerBoxes[player].Lines) do 
+			returnLineToPool(line) 
+		end
+		EspState.playerBoxes[player] = nil
+	end
+end
+
+local function refreshAllBoxes()
+	for player, data in pairs(EspState.playerBoxes) do
+		if data and data.Lines then
+			for _, line in ipairs(data.Lines) do 
+				returnLineToPool(line) 
+			end
+		end
+		EspState.playerBoxes[player] = nil
+	end
+	updateAllPlayers()
+end
+
+RunService.RenderStepped:Connect(function()
+	if EspState.config.enabled then 
+		updateAllPlayers() 
+	else 
+		hideAllBoxes() 
+	end
+end)
+
+Players.PlayerAdded:Connect(function(player)
+	player.CharacterAdded:Connect(function() 
+		updatePlayerBox(player) 
+	end)
+	if player.Character then 
+		updatePlayerBox(player) 
+	end
+end)
+
+Players.PlayerRemoving:Connect(function(player) 
+	removePlayerBox(player) 
+end)
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local HighlightConfig = {
+    enabled = false,
+    maxDistance = 5000,
+    useTeamFilter = false,
+    teamFilterMode = "standard",
+    fillColor = Color3.fromRGB(255, 255, 255),
+    outlineColor = Color3.fromRGB(0, 0, 0),
+    fillTransparency = 0.5,
+    outlineTransparency = 0,
+    depthMode = "AlwaysOnTop",
+    useRaycasting = false,
+    fadeWhenBlocked = false
+}
+
+local ChamsToggle = EspPlayer:AddToggle({
+    Name = "Chams",
+    Flag = "Nút_Chams",
+    Default = false,
+    Callback = function(value)
+        HighlightConfig.enabled = value
+    end,
+})
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+
+local playerHighlights = {}
+local lastUpdateTime = 0
+local updateInterval = 0.05
+
+local function getDepthMode()
+    return HighlightConfig.depthMode == "Occluded" and Enum.HighlightDepthMode.Occluded or Enum.HighlightDepthMode.AlwaysOnTop
+end
+
+local function isOnSameTeam(player1, player2)
+    if not player1 or not player2 or not player1.Character or not player2.Character then 
+        return false 
+    end
+    
+    if player1.Neutral and player2.Neutral then 
+        return false 
+    end
+    
+    if player1.Team and player2.Team and player1.Team == player2.Team then 
+        return true 
+    end
+    
+    if player1.TeamColor == player2.TeamColor then 
+        return true 
+    end
+    
+    local success1, attribute1 = pcall(function() 
+        return player1.Character:GetAttribute("Team") 
+    end)
+    local success2, attribute2 = pcall(function() 
+        return player2.Character:GetAttribute("Team") 
+    end)
+    
+    if success1 and success2 and attribute1 and attribute2 and attribute1 == attribute2 then 
+        return true 
+    end
+    
+    return false
+end
+
+local function checkLineOfSight(fromPosition, toPosition, ignoreCharacter)
+    local direction = toPosition - fromPosition
+    local distance = direction.Magnitude
+    
+    if distance == 0 then return true end
+    
+    local ray = Ray.new(fromPosition, direction.Unit * distance)
+    local hitPart = workspace:FindPartOnRay(ray, ignoreCharacter)
+    
+    if hitPart then
+        local isPlayerPart = false
+        if hitPart.Parent then
+            for _, child in hitPart.Parent:GetChildren() do
+                if child:IsA("Humanoid") then
+                    isPlayerPart = true
+                    break
+                end
+            end
+        end
+        return isPlayerPart
+    end
+    
+    return true
+end
+
+local function shouldShowHighlight(player)
+    if not HighlightConfig.enabled or player == LocalPlayer then 
+        return false 
+    end
+    
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then 
+        return false 
+    end
+    
+    if character.Humanoid.Health <= 0 then 
+        return false 
+    end
+
+    local myCharacter = LocalPlayer.Character
+    if not myCharacter or not myCharacter:FindFirstChild("HumanoidRootPart") then 
+        return false 
+    end
+
+    if (character.HumanoidRootPart.Position - myCharacter.HumanoidRootPart.Position).Magnitude > HighlightConfig.maxDistance then 
+        return false 
+    end
+    
+    if HighlightConfig.useTeamFilter and isOnSameTeam(LocalPlayer, player) then 
+        return false 
+    end
+    
+    if HighlightConfig.useRaycasting then
+        local isVisible = checkLineOfSight(myCharacter.HumanoidRootPart.Position, character.HumanoidRootPart.Position, myCharacter)
+        if not isVisible and not HighlightConfig.fadeWhenBlocked then
+            return false
+        end
+    end
+    
+    return true
+end
+
+local function createHighlight(player)
+    if playerHighlights[player] then 
+        playerHighlights[player]:Destroy() 
+    end
+
+    local character = player.Character
+    if not character then 
+        return 
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESP_" .. player.UserId
+    highlight.Adornee = character
+    highlight.DepthMode = getDepthMode()
+    highlight.FillColor = HighlightConfig.fillColor
+    highlight.OutlineColor = HighlightConfig.outlineColor
+    highlight.FillTransparency = HighlightConfig.fillTransparency
+    highlight.OutlineTransparency = HighlightConfig.outlineTransparency
+    highlight.Enabled = true
+    highlight.Parent = character
+    
+    playerHighlights[player] = highlight
+end
+
+local function removeHighlight(player)
+    if playerHighlights[player] then
+        pcall(function() 
+            playerHighlights[player]:Destroy() 
+        end)
+        playerHighlights[player] = nil
+    end
+end
+
+local function updateHighlightProperties(highlight, player)
+    if highlight then
+        highlight.FillColor = HighlightConfig.fillColor
+        highlight.OutlineColor = HighlightConfig.outlineColor
+        
+        local fillTransp = HighlightConfig.fillTransparency
+        local outlineTransp = HighlightConfig.outlineTransparency
+        
+        if HighlightConfig.useRaycasting and HighlightConfig.fadeWhenBlocked and player.Character then
+            local myCharacter = LocalPlayer.Character
+            if myCharacter then
+                local isVisible = checkLineOfSight(myCharacter.HumanoidRootPart.Position, player.Character.HumanoidRootPart.Position, myCharacter)
+                if not isVisible then
+                    fillTransp = fillTransp + 0.3
+                    outlineTransp = outlineTransp + 0.3
+                end
+            end
+        end
+        
+        highlight.FillTransparency = fillTransp
+        highlight.OutlineTransparency = outlineTransp
+        highlight.DepthMode = getDepthMode()
+    end
+end
+
+local function updateAllHighlights()
+    local currentTime = tick()
+    if currentTime - lastUpdateTime < updateInterval then 
+        return 
+    end
+    lastUpdateTime = currentTime
+
+    for _, player in Players:GetPlayers() do
+        if shouldShowHighlight(player) then
+            if player.Character then
+                if not playerHighlights[player] then
+                    createHighlight(player)
+                else
+                    if playerHighlights[player].Adornee ~= player.Character then
+                        playerHighlights[player].Adornee = player.Character
+                        playerHighlights[player].Parent = player.Character
+                    end
+                    updateHighlightProperties(playerHighlights[player], player)
+                end
+            end
+        else
+            removeHighlight(player)
+        end
+    end
+end
+
+RunService.Heartbeat:Connect(updateAllHighlights)
+
+Players.PlayerRemoving:Connect(function(player)
+    removeHighlight(player)
+end)
+
+Players.PlayerAdded:Connect(function(player)
+    local characterAddedConnection
+    characterAddedConnection = player.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        if player.Parent and shouldShowHighlight(player) then 
+            createHighlight(player) 
+        end
+    end)
+    
+    Players.PlayerRemoving:Connect(function(removedPlayer)
+        if removedPlayer == player then
+            pcall(function() 
+                characterAddedConnection:Disconnect() 
+            end)
+        end
+    end)
+end)
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    for _, player in Players:GetPlayers() do
+        if player ~= LocalPlayer then
+            removeHighlight(player)
+        end
+    end
+    task.wait(0.2)
+    updateAllHighlights()
+end)
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = workspace.CurrentCamera
+
+local CONFIG = {
+    enabled = false,
+    maxDistance = 5000,
+    useTeamFilter = false,
+    teamFilterMode = "custom",
+    fadeWhenBlocked = false,
+    font = Enum.Font.Code,
+    outline = true,
+    textSize = 12,
+    textColor = Color3.fromRGB(255, 255, 255),
+    -- Offset vị trí
+    offsetX = 0,
+    offsetY = 3,
+    offsetZ = 0
+}
+
+local NameToggle = EspPlayer:AddToggle({
+    Name = "Tên",
+    Flag = "Nút_Tên",
+    Default = false,
+    Callback = function(Value)
+        CONFIG.enabled = Value
+    end
+})
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+
+-- Kill default names permanently
+local function killDefaultName(plr)
+    if plr == LocalPlayer then return end
+    task.spawn(function()
+        repeat task.wait() until plr.Character and plr.Character:FindFirstChild("Head")
+        local head = plr.Character.Head
+        for _, v in pairs(head:GetChildren()) do
+            if v:IsA("BillboardGui") or v:IsA("SurfaceGui") or v:IsA("TextLabel") then
+                v:Destroy()
+            end
+        end
+        head.ChildAdded:Connect(function(c)
+            if c:IsA("BillboardGui") or c:IsA("SurfaceGui") or c:IsA("TextLabel") then
+                task.defer(function() c:Destroy() end)
+            end
+        end)
+    end)
+end
+
+for _, p in Players:GetPlayers() do killDefaultName(p) end
+Players.PlayerAdded:Connect(killDefaultName)
+
+local function sameTeam(p1, p2)
+    if not p1.Character or not p2.Character then return false end
+    if CONFIG.teamFilterMode == "standard" then
+        return p1.Team and p1.Team == p2.Team
+    end
+    if p1.Team and p1.Team == p2.Team then return true end
+    local a = p1.Character:GetAttribute("Team")
+    local b = p2.Character:GetAttribute("Team")
+    return a and b and a == b
+end
+
+local esp = {}
+
+local function create(plr)
+    if esp[plr] or plr == LocalPlayer then return end
+
+    local bill = Instance.new("BillboardGui")
+    bill.Name = "NAME_ESP"
+    bill.AlwaysOnTop = true
+    bill.Size = UDim2.new(4, 0, 1.5, 0)
+    bill.StudsOffset = Vector3.new(CONFIG.offsetX, CONFIG.offsetY, CONFIG.offsetZ)
+    bill.Parent = game.CoreGui
+
+    local txt = Instance.new("TextLabel")
+    txt.Size = UDim2.new(1, 0, 1, 0)
+    txt.BackgroundTransparency = 1
+    txt.Font = CONFIG.font
+    txt.TextColor3 = CONFIG.textColor
+    txt.TextStrokeTransparency = CONFIG.outline and 0 or 1
+    txt.TextStrokeColor3 = Color3.new()
+    txt.TextScaled = false
+    txt.TextSize = CONFIG.textSize
+    txt.Parent = bill
+
+    esp[plr] = {gui = bill, label = txt}
+end
+
+local function remove(plr)
+    if esp[plr] then esp[plr].gui:Destroy() esp[plr] = nil end
+end
+
+RunService.RenderStepped:Connect(function()
+    if not CONFIG.enabled then
+        for plr, e in pairs(esp) do
+            e.gui.Enabled = false
+        end
+        return
+    end
+
+    for plr, e in pairs(esp) do
+        local char = plr.Character
+        if not char or not char:FindFirstChild("Head") or not char:FindFirstChild("HumanoidRootPart") then
+            e.gui.Enabled = false
+            continue
+        end
+
+        local headPos = char.Head.Position
+        local rootPos = char.HumanoidRootPart.Position
+        local playerPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if not playerPos then
+            e.gui.Enabled = false
+            continue
+        end
+
+        local distance = (rootPos - playerPos.Position).Magnitude
+        if distance > CONFIG.maxDistance then
+            e.gui.Enabled = false
+            continue
+        end
+
+        if CONFIG.useTeamFilter and sameTeam(LocalPlayer, plr) then
+            e.gui.Enabled = false
+            continue
+        end
+
+        local _, onScreen = Camera:WorldToViewportPoint(headPos)
+        local blocked = #Camera:GetPartsObscuringTarget({headPos}, {LocalPlayer.Character or {}, char}) > 0
+
+        -- Update StudsOffset với config mới
+        e.gui.StudsOffset = Vector3.new(CONFIG.offsetX, CONFIG.offsetY, CONFIG.offsetZ)
+        
+        e.gui.Adornee = char.Head
+        e.gui.Enabled = onScreen and (CONFIG.fadeWhenBlocked or not blocked)
+
+        if e.gui.Enabled then
+            e.label.TextSize = CONFIG.textSize
+            e.label.Font = CONFIG.font
+            e.label.TextTransparency = CONFIG.fadeWhenBlocked and blocked and 0.5 or 0
+            e.label.TextStrokeTransparency = CONFIG.fadeWhenBlocked and blocked and 0.7 or (CONFIG.outline and 0 or 1)
+            e.label.Text = plr.Name
+            e.label.TextColor3 = CONFIG.textColor
+        end
+    end
+end)
+
+-- Init
+for _, p in Players:GetPlayers() do
+    if p ~= LocalPlayer then create(p) end
+end
+Players.PlayerAdded:Connect(create)
+Players.PlayerRemoving:Connect(remove)
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
+local rainbowHue = 0 
+local speedScale = 200 
+local random = math.random
+
+local CONFIG = {
+    Enabled = false,
+    
+    colorMode = "Static",
+    baseColor = Color3.fromRGB(255, 255, 255),
+    rainbowSpeed = 1,
+    TracerColor = Color3.fromRGB(255, 255, 255),
+
+    TracerThickness = 1.5,
+    TracerTransparency = 1,
+    TracerPosition = "Top",
+    
+    lerpSmoothing = false,
+    lerpFactor = 0.15,
+    jitterEnabled = false,
+    jitterIntensity = 1,
+    
+    UseRaycasting = false,
+    FadeWhenBlocked = false,
+    MaxDistance = 5000,
+    UseTeamFilter = false,
+    TeamFilterMode = "standard",
+    UseScreenCulling = false,
+    DrawOffscreen = true,
+    
+    -- Offset cho điểm cuối (head)
+    EndOffsetX = 0,
+    EndOffsetY = 0,
+}
+
+local TracerToggle = EspPlayer:AddToggle({
+        Name = "Đường kẽ",
+        Flag = "Nút_ĐườngKẽ",
+        Default = false,
+        Callback = function(Value)
+            CONFIG.Enabled = Value
+        end
+    })
+  --▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+
+local Tracers = {}
+local DrawingPool = {}
+local PoolSize = 0
+local MaxPoolSize = 50
+
+local function vector2Lerp(a, b, t)
+    return a + (b - a) * t
+end
+
+local function color3Lerp(a, b, t)
+    return Color3.new(
+        a.R + (b.R - a.R) * t,
+        a.G + (b.G - a.G) * t,
+        a.B + (b.B - a.B) * t
+    )
+end
+
+local function applyJitter(point)
+    if not CONFIG.jitterEnabled then return point end
+    local intensity = CONFIG.jitterIntensity or 1
+    local offsetX = (random() * 2 - 1) * intensity * 0.5
+    local offsetY = (random() * 2 - 1) * intensity * 0.5
+    return point + Vector2.new(offsetX, offsetY)
+end
+
+local function sameTeam(p1, p2)
+    if not p1.Character or not p2.Character then return false end
+    if CONFIG.TeamFilterMode == "standard" then
+        return p1.Team and p1.Team == p2.Team
+    end
+    if p1.Team and p1.Team == p2.Team then return true end
+    local a = p1.Character:GetAttribute("Team")
+    local b = p2.Character:GetAttribute("Team")
+    return a and b and a == b
+end
+
+local function getHealthColor(humanoid)
+    if not humanoid or humanoid.MaxHealth <= 0 then return CONFIG.baseColor end
+    local healthRatio = humanoid.Health / humanoid.MaxHealth
+    return Color3.fromHSV(healthRatio * 0.33, 1, 1)
+end
+
+local function getTracerColor(player)
+    local colorMode = CONFIG.colorMode
+    local character = player.Character
+    local humanoid = character and character:FindFirstChild("Humanoid")
+    
+    if colorMode == "Rainbow" then return CONFIG.TracerColor
+    elseif colorMode == "Team" then return player.Team and player.Team.TeamColor.Color or CONFIG.baseColor
+    elseif colorMode == "Health" and humanoid then return getHealthColor(humanoid)
+    else return CONFIG.baseColor
+    end
+end
+
+local function isBlockedByWall(targetPosition, targetCharacter, originPosition)
+	if not CONFIG.UseRaycasting then 
+		return false 
+	end
+	
+	local localCharacter = LocalPlayer.Character
+	if not localCharacter then 
+		return true 
+	end
+	
+	local distance = (targetPosition - originPosition).Magnitude
+	local rayDirection = (targetPosition - originPosition).Unit * (distance + 1)
+	local raycastParameters = RaycastParams.new()
+	raycastParameters.FilterType = Enum.RaycastFilterType.Blacklist
+	raycastParameters.FilterDescendantsInstances = {LocalPlayer.Character or {}, targetCharacter or {}}
+	
+	local raycastResult = Workspace:Raycast(originPosition, rayDirection, raycastParameters)
+    
+	return raycastResult ~= nil and raycastResult.Instance:IsDescendantOf(targetCharacter) == false
+end
+
+local function GetLineFromPool()
+    if PoolSize > 0 then
+        local line = DrawingPool[PoolSize]
+        DrawingPool[PoolSize] = nil
+        PoolSize = PoolSize - 1
+        line.Visible = false
+        return line
+    else
+        local line = Drawing.new("Line")
+        line.Color = CONFIG.TracerColor
+        line.Thickness = CONFIG.TracerThickness
+        line.Transparency = CONFIG.TracerTransparency
+        line.Visible = false
+        return line
+    end
+end
+
+local function ReturnLineToPool(line)
+    if PoolSize < MaxPoolSize then
+        line.Visible = false
+        PoolSize = PoolSize + 1
+        DrawingPool[PoolSize] = line
+    else
+        line:Remove()
+    end
+end
+
+local function create(plr)
+    if Tracers[plr] or plr == LocalPlayer then return end
+
+    local line = GetLineFromPool()
+    
+    Tracers[plr] = {
+        line = line, 
+        prevHeadPoint = Vector2.new(0, 0),
+        prevColor = CONFIG.TracerColor
+    }
+end
+
+local function remove(plr)
+    if Tracers[plr] then 
+        ReturnLineToPool(Tracers[plr].line)
+        Tracers[plr] = nil 
+    end
+end
+
+for _, p in Players:GetPlayers() do create(p) end
+Players.PlayerAdded:Connect(create)
+Players.PlayerRemoving:Connect(remove)
+
+
+RunService.RenderStepped:Connect(function()
+    
+    if CONFIG.colorMode == "Rainbow" then
+        local scaledSpeed = CONFIG.rainbowSpeed / speedScale 
+        rainbowHue = (rainbowHue + scaledSpeed) % 1 
+        CONFIG.TracerColor = Color3.fromHSV(rainbowHue, 1, 1)
+    elseif CONFIG.colorMode == "Static" and CONFIG.TracerColor ~= CONFIG.baseColor then
+        CONFIG.TracerColor = CONFIG.baseColor
+    end
+    
+    local screenWidth = Camera.ViewportSize.X
+    local screenHeight = Camera.ViewportSize.Y
+    
+    local rootPartLocal = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not CONFIG.Enabled or not rootPartLocal then
+        for plr, t in pairs(Tracers) do t.line.Visible = false end
+        return
+    end
+
+    for plr, t in pairs(Tracers) do
+        local char = plr.Character
+        
+        if not char or not char:FindFirstChild("Head") or not char:FindFirstChild("HumanoidRootPart") then
+            t.line.Visible = false
+            continue
+        end
+
+        local headPos = char.Head.Position
+        local rootPos = char.HumanoidRootPart.Position
+        local distance = (rootPos - rootPartLocal.Position).Magnitude
+        
+        if distance > CONFIG.MaxDistance or (CONFIG.UseTeamFilter and sameTeam(LocalPlayer, plr)) then
+            t.line.Visible = false
+            continue
+        end
+
+        local headPoint3D, onScreen = Camera:WorldToViewportPoint(headPos)
+        local currentHeadPoint = Vector2.new(headPoint3D.X, headPoint3D.Y)
+        
+        -- Kiểm tra nếu target đang phía sau camera
+        if headPoint3D.Z < 0 then
+            t.line.Visible = false
+            continue
+        end
+        
+        if not CONFIG.DrawOffscreen and not onScreen then
+            t.line.Visible = false
+            continue
+        end
+        
+        local isBlocked = isBlockedByWall(headPos, char, rootPartLocal.Position)
+        local isVisible = not CONFIG.UseRaycasting or not isBlocked 
+
+        local targetColor = getTracerColor(plr)
+        local targetTransparency = CONFIG.TracerTransparency
+        
+        if CONFIG.FadeWhenBlocked and not isVisible then
+            targetTransparency = 0.5
+        end
+        
+        local finalHeadPoint = currentHeadPoint
+        if CONFIG.lerpSmoothing then
+            finalHeadPoint = vector2Lerp(t.prevHeadPoint, currentHeadPoint, CONFIG.lerpFactor)
+            t.prevHeadPoint = finalHeadPoint
+        else
+            t.prevHeadPoint = currentHeadPoint
+        end
+        
+        -- Thêm offset X Y vào điểm cuối
+        finalHeadPoint = finalHeadPoint + Vector2.new(CONFIG.EndOffsetX, CONFIG.EndOffsetY)
+        
+        finalHeadPoint = applyJitter(finalHeadPoint)
+        
+        local finalColor = targetColor
+        if CONFIG.lerpSmoothing then
+            finalColor = color3Lerp(t.prevColor, targetColor, CONFIG.lerpFactor)
+            t.prevColor = finalColor
+        else
+            t.prevColor = targetColor
+        end
+        
+        -- Tính originPoint từ player position trên screen
+        local playerHeadPoint3D, playerOnScreen = Camera:WorldToViewportPoint(rootPartLocal.Position)
+        
+        -- Nếu player phía sau camera, không vẽ tracer
+        if playerHeadPoint3D.Z < 0 then
+            t.line.Visible = false
+            continue
+        end
+        
+        local playerScreenPoint = Vector2.new(playerHeadPoint3D.X, playerHeadPoint3D.Y)
+        
+        local originPoint
+        if CONFIG.TracerPosition == "Bottom" then
+            originPoint = Vector2.new(playerScreenPoint.X, screenHeight)
+        elseif CONFIG.TracerPosition == "Top" then
+            originPoint = Vector2.new(playerScreenPoint.X, 0)
+        else
+            originPoint = Vector2.new(playerScreenPoint.X, playerScreenPoint.Y)
+        end
+        
+        originPoint = applyJitter(originPoint)
+        
+        local shouldDraw = CONFIG.Enabled and (isVisible or (CONFIG.UseRaycasting and not CONFIG.FadeWhenBlocked))
+        
+        if CONFIG.DrawOffscreen then
+             shouldDraw = CONFIG.Enabled and (not isBlocked or CONFIG.FadeWhenBlocked)
+        else
+             shouldDraw = CONFIG.Enabled and onScreen and isVisible
+        end
+        
+        t.line.Visible = shouldDraw
+
+        if t.line.Visible then
+            t.line.From = originPoint
+            t.line.To = finalHeadPoint
+            t.line.Color = finalColor
+            t.line.Thickness = CONFIG.TracerThickness
+            t.line.Transparency = targetTransparency
+        end
+    end
+end)
+
+EspPlayer:AddParagraph({
+	Title = "Định vị cơ bản",
+	Content = "Có thể lỗi không mong muốn, hãy thông cảm tôi là người mới!"
+})
+EspPlayer:AddParagraph({
+	Title = "Thông báo!",
+	Content = "Sẽ cải thiện và thêm nhiều chức năng sau!!"
+})
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local AimPlayer = AimbotPlayer:DrawSection({
+	Name = "Chính",
+	Position = 'left'
+});
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
+
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
+
+local AimbotConfig = {
+    Enabled = false,
+    FOVRadius = 100,
+    FOVThickness = 1,
+    SmoothValue = 0.5,
+    VelocityPrediction = 0.1,
+    CheckOcclusion = false,
+    TeamCheck = false,
+    
+    Priority = {
+        LowHP = true,
+        Closest = true,
+        CenterScreen = true,
+        MovementPrediction = true
+    }
+}
+
+local CurrentTarget = nil
+local TargetSwitchCooldown = 0
+local TargetSwitchDelay = 0.5
+local FOVCircle = nil
+local RenderConnection = nil
+
+-- Thêm toggle
+local AimbotToggle = AimPlayer:AddToggle({
+    Name = "Aimbot",
+    Flag = "Toggle_Aimbot",
+    Default = false,
+    Callback = function(Value)
+        AimbotConfig.Enabled = Value
+    end
+})
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬--
+
+local function GetDistance(pos1, pos2)
+    return (pos1 - pos2).Magnitude
+end
+
+local function IsInFOV(screenPos)
+    if screenPos.Z <= 0 then return false end
+    
+    local screenSize = Camera.ViewportSize
+    local screenCenter = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+    local screenPosVec2 = Vector2.new(screenPos.X, screenPos.Y)
+    local distance = (screenPosVec2 - screenCenter).Magnitude
+    return distance <= AimbotConfig.FOVRadius
+end
+
+local function RaycastToTarget(targetPos)
+    if not AimbotConfig.CheckOcclusion then return true end
+    if not CurrentTarget or not CurrentTarget.Character then return false end
+    
+    local camera = Camera
+    local humanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoidRootPart then return false end
+    
+    local raycastParams = RaycastParams.new()
+    raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
+    raycastParams.FilterDescendantsInstances = {LocalPlayer.Character}
+    
+    local rayResult = Workspace:Raycast(camera.CFrame.Position, (targetPos - camera.CFrame.Position).Unit * 1000, raycastParams)
+    
+    if not rayResult then return true end
+    
+    local hit = rayResult.Instance
+    if hit:IsDescendantOf(CurrentTarget.Character) then
+        return true
+    end
+    
+    return false
+end
+
+local function PredictTargetPosition(character)
+    if not character then return nil end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return nil end
+    
+    local velocity = humanoidRootPart.AssemblyLinearVelocity
+    local predictedPos = humanoidRootPart.Position + velocity * AimbotConfig.VelocityPrediction
+    
+    return predictedPos
+end
+
+local function CalculateTargetPriority(player)
+    if player == LocalPlayer then return math.huge end
+    if not player.Character then return math.huge end
+    if not LocalPlayer.Character then return math.huge end
+    
+    local character = player.Character
+    local humanoid = character:FindFirstChild("Humanoid")
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local localRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not humanoid or not humanoidRootPart or humanoid.Health <= 0 or not localRootPart then
+        return math.huge
+    end
+    
+    if AimbotConfig.TeamCheck and player.Team == LocalPlayer.Team then
+        return math.huge
+    end
+    
+    local screenPos = Camera:WorldToViewportPoint(humanoidRootPart.Position)
+    
+    if not IsInFOV(screenPos) then
+        return math.huge
+    end
+    
+    if not RaycastToTarget(humanoidRootPart.Position) then
+        return math.huge
+    end
+    
+    local priority = 0
+    
+    if AimbotConfig.Priority.LowHP then
+        priority = priority - humanoid.Health
+    end
+    
+    if AimbotConfig.Priority.Closest then
+        priority = priority + GetDistance(humanoidRootPart.Position, localRootPart.Position) * 0.5
+    end
+    
+    if AimbotConfig.Priority.CenterScreen then
+        local screenSize = Camera.ViewportSize
+        local screenCenter = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+        local screenPosVec2 = Vector2.new(screenPos.X, screenPos.Y)
+        local screenDistance = (screenPosVec2 - screenCenter).Magnitude
+        priority = priority + screenDistance * 0.3
+    end
+    
+    if AimbotConfig.Priority.MovementPrediction then
+        local velocity = humanoidRootPart.AssemblyLinearVelocity.Magnitude
+        if velocity < 5 then
+            priority = priority - 10
+        end
+    end
+    
+    return priority
+end
+
+local function FindBestTarget()
+    local bestTarget = nil
+    local bestPriority = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        local priority = CalculateTargetPriority(player)
+        
+        if priority < bestPriority then
+            bestPriority = priority
+            bestTarget = player
+        end
+    end
+    
+    return bestTarget
+end
+
+local function UpdateTarget()
+    if not LocalPlayer.Character then return end
+    
+    TargetSwitchCooldown = TargetSwitchCooldown - RunService.RenderStepped:Wait()
+    
+    if TargetSwitchCooldown <= 0 then
+        local newTarget = FindBestTarget()
+        
+        if newTarget ~= CurrentTarget then
+            CurrentTarget = newTarget
+            TargetSwitchCooldown = TargetSwitchDelay
+        end
+    end
+end
+
+local function AimAtTarget()
+    if not AimbotConfig.Enabled or not CurrentTarget then return end
+    
+    local character = CurrentTarget.Character
+    if not character then 
+        CurrentTarget = nil
+        return 
+    end
+    
+    local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChild("Humanoid")
+    
+    if not humanoidRootPart or not humanoid or humanoid.Health <= 0 then
+        CurrentTarget = nil
+        return
+    end
+    
+    local targetPos = PredictTargetPosition(character) or humanoidRootPart.Position
+    
+    local cameraDirection = (targetPos - Camera.CFrame.Position).Unit
+    local targetCFrame = CFrame.lookAt(Camera.CFrame.Position, Camera.CFrame.Position + cameraDirection)
+    
+    local smoothedCFrame = Camera.CFrame:Lerp(targetCFrame, AimbotConfig.SmoothValue)
+    Camera.CFrame = smoothedCFrame
+end
+
+local function CreateFOVCircle()
+    if FOVCircle then
+        FOVCircle:Remove()
+    end
+    
+    FOVCircle = Drawing.new("Circle")
+    FOVCircle.Visible = true
+    FOVCircle.Radius = AimbotConfig.FOVRadius
+    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Transparency = 1
+    FOVCircle.Thickness = AimbotConfig.FOVThickness
+    FOVCircle.Filled = false
+end
+
+local function UpdateFOVCircle()
+    if FOVCircle then
+        local screenSize = Camera.ViewportSize
+        FOVCircle.Position = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
+        FOVCircle.Thickness = AimbotConfig.FOVThickness
+    end
+end
+
+local function RemoveFOVCircle()
+    if FOVCircle then
+        FOVCircle:Remove()
+        FOVCircle = nil
+    end
+end
+
+local function StartAimbot()
+    if RenderConnection then return end
+    
+    task.wait(1)
+    
+    if AimbotConfig.Enabled then
+        CreateFOVCircle()
+    end
+    
+    RenderConnection = RunService.RenderStepped:Connect(function()
+        if not AimbotConfig.Enabled then
+            RemoveFOVCircle()
+            CurrentTarget = nil
+            return
+        end
+        
+        if not LocalPlayer.Character then return end
+        
+        if not FOVCircle then
+            CreateFOVCircle()
+        end
+        
+        UpdateFOVCircle()
+        UpdateTarget()
+        AimAtTarget()
+    end)
+end
+
+StartAimbot()
+
+
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+local AimPlayer = AimbotModel:DrawSection({
+	Name = "Chính",
+	Position = 'left'
+});
+
+local AimPlayer = SettingAimbotPlayer:DrawSection({
+	Name = "Tùy chọn ngắm người",
+	Position = 'left'
+});
+
+local AimPlayer = SettingAimbotPlayer:DrawSection({
+	Name = "Màu",
+	Position = 'right'
+});
+
+local AimPlayer = SettingAimbotPlayer:DrawSection({
+	Name = "Tùy chọn ngắm quái",
+	Position = 'left'
+});
+
+local AimPlayer = SettingAimbotPlayer:DrawSection({
+	Name = "Màu",
+	Position = 'right'
+});
+--▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬-- 
+--[Tạo tab cấu hình]
+local ConfigUI = Window:DrawConfig({
+	Name = "Config",
+	Icon = "folder",
+	Config = ConfigManager
+});
+
+ConfigUI:Init();
