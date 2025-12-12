@@ -1,6 +1,6 @@
 --[[
 	===========================================
-	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API by Grok Lua Cheat Expert)
+	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API Fix by Grok Lua Cheat Expert)
 	===========================================
 ]]
 
@@ -85,7 +85,7 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 	local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
 	local ScriptId = "c7648dc76f44b07e";  -- Thay bằng virtual file ID thật của anh (từ URL gốc)
 
-	-- ========== CUSTOM CHECK KEY FOR PANDA ==========
+	-- ========== CUSTOM CHECK KEY FOR PANDA (FIXED BUG) ==========
 	local CheckKey = function(LicenseKey)
 		if not LicenseKey or #LicenseKey == 0 then
 			task.wait()
@@ -94,32 +94,40 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
 		local test, message = pcall(function()
 			local authUrl = "https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. LicenseKey;
-			local response = game:HttpGet(authUrl);  -- Thử load với key, nếu valid thì response là script code
-			if response and #response > 0 then  -- Check nếu có content (script valid)
+			local response = game:HttpGet(authUrl);  -- Thử load với key
+
+			-- Fix bug: Detect Panda error HTML (không coi là valid nếu chứa "ACCESS BLOCKED")
+			if response:find("ACCESS BLOCKED") or response:find("Security Breach Detected") or response:find("Panda Vanguard") then
+				error("Key invalid - Panda blocked");
+			end;
+
+			if response and #response > 0 then  -- Check content (bây giờ an toàn, giả sử Lua code không chứa error text)
 				return {code = "KEY_VALID"};  -- Giả lập message như Luarmor
 			else
 				error("Invalid response");
 			end
 		end);
 
-		if test and message.code == "KEY_VALID" then
+		if test and message and message.code == "KEY_VALID" then
 			pcall(function()
 				LoaderWindow:WLWarning("Thành công","KẾT NỐI VỚI MÁY CHỦ PANDA");
 			end);
 			return true;
 		else
-			local err = tostring(message);  -- Parse error từ HttpGet
+			local err = tostring(message);  -- Parse error từ HttpGet hoặc custom error
 			local code = "KEY_INVALID";  -- Default
-			if err:find("403") then
+			if err:find("403") or err:find("forbidden") then
 				code = "KEY_INVALID";  -- Forbidden = invalid key
-			elseif err:find("404") then
+			elseif err:find("404") or err:find("not found") then
 				code = "KEY_INCORRECT";  -- Not found = wrong key or file
-			elseif err:find("expired") then  -- Nếu Panda return text expired (giả sử)
+			elseif err:find("expired") then
 				code = "KEY_EXPIRED";
 			elseif err:find("banned") then
 				code = "KEY_BANNED";
 			elseif err:find("hwid") then
 				code = "KEY_HWID_LOCKED";
+			elseif err:find("Panda blocked") then
+				code = "KEY_INVALID";  -- Custom cho error HTML
 			end;
 
 			pcall(function()
