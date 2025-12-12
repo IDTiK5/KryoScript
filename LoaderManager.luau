@@ -1,15 +1,15 @@
 --[[
 	===========================================
-	KRYO LOADER MANAGER - KEY SYSTEM ONLY
+	KRYO LOADER MANAGER - KEY SYSTEM ONLY (MOD Panda API by Grok Lua Cheat Expert)
 	===========================================
 ]]
 
-local loader_cache = "ARCENEY_LOADER_CACHE";
+local loader_cache = "PANDA_LOADER_CACHE";  -- Đổi tên cache để Panda riêng
 
 local Loader = (isfile(loader_cache) and loadstring(readfile(loader_cache))());
 
 if not isfile(loader_cache) or not Loader then
-	local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");
+	local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");  -- Giữ loader UI gốc
 	writefile(loader_cache , src);
 	Loader = loadstring(src)();
 end;
@@ -24,25 +24,25 @@ getcustomasset = getcustomasset or getsynasset;
 getgenv = getgenv or getfenv;
 
 return function(MainLoader , SecondLoader , SupportedExternal)
-	local LoaderWindow = Loader.new("ARCENEY.CC","LOADER");
-	local LicenseKeyCache = "Arceney.license";
+	local LoaderWindow = Loader.new("PANDA AUTH","LOADER");  -- Đổi title sang Panda
+	local LicenseKeyCache = "Panda.license";  -- Đổi cache key Panda
 
 	LoaderWindow:AddLabel("Đang khởi tạo","Thành công");
 
 	-- ========== CREATE DIRECTORIES ==========
-	if not isfolder("Arceney.cc") then
-		makefolder("Arceney.cc");
-		LoaderWindow:AddLabel("Tạo thư mục \"Arceney.cc\"","Thành công");
+	if not isfolder("Panda.cc") then  -- Đổi folder sang Panda
+		makefolder("Panda.cc");
+		LoaderWindow:AddLabel("Tạo thư mục \"Panda.cc\"","Thành công");
 	end;
 
-	if not isfolder("Arceney-bin") then
-		makefolder("Arceney-bin");
-		LoaderWindow:AddLabel("Tạo thư mục \"Arceney-bin\"","Thành công");
+	if not isfolder("Panda-bin") then
+		makefolder("Panda-bin");
+		LoaderWindow:AddLabel("Tạo thư mục \"Panda-bin\"","Thành công");
 	end;
 
-	if not isfolder("Arceney-Cache") then
-		makefolder("Arceney-Cache");
-		LoaderWindow:AddLabel("Tạo thư mục \"Arceney-Cache\"","Thành công");
+	if not isfolder("Panda-Cache") then
+		makefolder("Panda-Cache");
+		LoaderWindow:AddLabel("Tạo thư mục \"Panda-Cache\"","Thành công");
 	end;
 
 	-- ========== INTERNAL TEST ==========
@@ -81,49 +81,54 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 
 	task.wait(1);
 
-	-- ========== KEY VERIFICATION SETUP ==========
-	local sdk_api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))();
+	-- ========== PANDA SETUP ==========
 	local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
-	local ScriptId = string.match(LoaderLink, "https://api.luarmor.net/files/v3/loaders/(%w+).lua");
+	local ScriptId = "c7648dc76f44b07e";  -- Thay bằng virtual file ID thật của anh (từ URL gốc)
 
-	sdk_api.script_id = ScriptId;
-
-	-- ========== CHECK KEY FUNCTION ==========
+	-- ========== CUSTOM CHECK KEY FOR PANDA ==========
 	local CheckKey = function(LicenseKey)
-		if not LicenseKey:byte() then
+		if not LicenseKey or #LicenseKey == 0 then
 			task.wait()
 			return false;
 		end;
 
-		local test , message = pcall(sdk_api.check_key , tostring(LicenseKey));
+		local test, message = pcall(function()
+			local authUrl = "https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. LicenseKey;
+			local response = game:HttpGet(authUrl);  -- Thử load với key, nếu valid thì response là script code
+			if response and #response > 0 then  -- Check nếu có content (script valid)
+				return {code = "KEY_VALID"};  -- Giả lập message như Luarmor
+			else
+				error("Invalid response");
+			end
+		end);
 
-		if test then
-			if message.code == "KEY_VALID" then
-				pcall(function()
-					LoaderWindow:WLWarning("Thành công","KẾT NỐI VỚI MÁY CHỦ");
-				end);
-				return true;
-			elseif message.code == "KEY_EXPIRED" then
-				pcall(function()
-					LoaderWindow:WLWarning("Cảnh báo","Khóa cấp phép đã hết hạn.");
-				end);
-			elseif message.code == "KEY_BANNED" then
-				pcall(function()
-					LoaderWindow:WLWarning("Lỗi","Bạn bị cấm");
-				end);
-			elseif message.code == "KEY_HWID_LOCKED" then
-				pcall(function()
-					LoaderWindow:WLWarning("Lỗi","ID phần cứng không hợp lệ");
-				end);
-			elseif message.code == "KEY_INCORRECT" then
-				pcall(function()
-					LoaderWindow:WLWarning("Lỗi","Khóa không chính xác. Nhấp vào lấy khóa bên dưới");
-				end);
-			elseif message.code == "KEY_INVALID" then
-				pcall(function()
-					LoaderWindow:WLWarning("Lỗi","Khóa cấp phép không hợp lệ");
-				end);
+		if test and message.code == "KEY_VALID" then
+			pcall(function()
+				LoaderWindow:WLWarning("Thành công","KẾT NỐI VỚI MÁY CHỦ PANDA");
+			end);
+			return true;
+		else
+			local err = tostring(message);  -- Parse error từ HttpGet
+			local code = "KEY_INVALID";  -- Default
+			if err:find("403") then
+				code = "KEY_INVALID";  -- Forbidden = invalid key
+			elseif err:find("404") then
+				code = "KEY_INCORRECT";  -- Not found = wrong key or file
+			elseif err:find("expired") then  -- Nếu Panda return text expired (giả sử)
+				code = "KEY_EXPIRED";
+			elseif err:find("banned") then
+				code = "KEY_BANNED";
+			elseif err:find("hwid") then
+				code = "KEY_HWID_LOCKED";
 			end;
+
+			pcall(function()
+				LoaderWindow:WLWarning("Lỗi", code == "KEY_EXPIRED" and "Khóa cấp phép đã hết hạn." or
+					code == "KEY_BANNED" and "Bạn bị cấm" or
+					code == "KEY_HWID_LOCKED" and "ID phần cứng không hợp lệ" or
+					code == "KEY_INCORRECT" and "Khóa không chính xác. Nhấp vào lấy khóa bên dưới" or
+					"Khóa cấp phép không hợp lệ");
+			end);
 
 			return false;
 		end;
@@ -136,13 +141,13 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 	local LoadKeySystem = function()
 		local RateLimit = false;
 
-		LoaderWindow:AddLabel("Hệ thống khóa","Thành công");
+		LoaderWindow:AddLabel("Hệ thống khóa Panda","Thành công");
 
 		LoaderWindow:Whitelist({
 			{
 				Text = "Lấy khóa",
 				Callback = function()
-					(setclipboard or toclipboard)("https://arceney.cc/key")
+					(setclipboard or toclipboard)("https://dash.pandadevelopment.net/dashboard/keys")  -- Đổi link sang Panda dash
 				end,
 			},
 			{
@@ -215,8 +220,8 @@ return function(MainLoader , SecondLoader , SupportedExternal)
 	task.delay(1.5, LoaderWindow.Close);
 
 	-- ========== KEY VERIFIED - READY FOR MAIN SCRIPT ==========
-	-- Script chính sẽ load sau đây
-	-- Không load UI Fatality ở đây
+	-- Load script chính ở đây nếu cần, ví dụ:
+	-- loadstring(game:HttpGet("https://pandadevelopment.net/virtual/file/" .. ScriptId .. "?key=" .. script_key))()
 
 	return true;
 end;
