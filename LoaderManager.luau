@@ -1,127 +1,222 @@
 --[[
-    OPTION A — KRYO UI + OV2.5 KEY SYSTEM
-    -------------------------------------------------------------------
-    Đây là bản đầy đủ, không lỗi, dùng API OV2.5 chính thức của Pelican
-    UI loader = Kryo Loader đẹp
-    Key system = OV2.5 API
+	===========================================
+	KRYO LOADER MANAGER - KEY SYSTEM ONLY
+	===========================================
 ]]
 
-local loader_cache = "KRYO_UI_CACHE";
+local loader_cache = "ARCENEY_LOADER_CACHE";
 
 local Loader = (isfile(loader_cache) and loadstring(readfile(loader_cache))());
+
 if not isfile(loader_cache) or not Loader then
-    local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");
-    writefile(loader_cache , src);
-    Loader = loadstring(src)();
+	local src = game:HttpGet("https://raw.githubusercontent.com/4lpaca-pin/Arceney/refs/heads/main/interface/loader.luau");
+	writefile(loader_cache , src);
+	Loader = loadstring(src)();
 end;
 
-return function(MainScriptURL)
+setupvalue = setupvalue or debug.setupvalue;
+getupvalue = getupvalue or debug.getupvalue;
+getupvalues = getupvalues or debug.getupvalues;
+getconstants = getconstants or debug.getconstants;
+getrawmetatable = getrawmetatable or debug.getrawmetatable;
+getscripthash = getscripthash or get_script_hash;
+getcustomasset = getcustomasset or getsynasset;
+getgenv = getgenv or getfenv;
 
-    local LICENSE_FILE = "Kryo.license"
+return function(MainLoader , SecondLoader , SupportedExternal)
+	local LoaderWindow = Loader.new("ARCENEY.CC","LOADER");
+	local LicenseKeyCache = "Arceney.license";
 
-    local function CreateWindow()
-        return Loader.new("KRYO AUTH", "LOADER")
-    end
+	LoaderWindow:AddLabel("Đang khởi tạo","Thành công");
 
-    local Window = CreateWindow()
-    Window:AddLabel("Đang khởi tạo...", "Thành công")
+	-- ========== CREATE DIRECTORIES ==========
+	if not isfolder("Arceney.cc") then
+		makefolder("Arceney.cc");
+		LoaderWindow:AddLabel("Tạo thư mục \"Arceney.cc\"","Thành công");
+	end;
 
-    --------------------------------------------
-    --            API OV2.5 CHECK
-    --------------------------------------------
-    local ValidateURL = "https://pdl.pelican-dev.net/api/v2.5/validate"
+	if not isfolder("Arceney-bin") then
+		makefolder("Arceney-bin");
+		LoaderWindow:AddLabel("Tạo thư mục \"Arceney-bin\"","Thành công");
+	end;
 
-    local function CheckKey(key)
-        if not key or key == "" then
-            return false, "EMPTY"
-        end
+	if not isfolder("Arceney-Cache") then
+		makefolder("Arceney-Cache");
+		LoaderWindow:AddLabel("Tạo thư mục \"Arceney-Cache\"","Thành công");
+	end;
 
-        local result, response = pcall(function()
-            return game:HttpPost(ValidateURL, "key="..key)
-        end)
+	-- ========== INTERNAL TEST ==========
+	local InternalTest = function()
+		local result,out = pcall(function()
+			return debug.info(getgc or checkcaller or clonefunction or newcclosure or hookfunction or writefile , 's') == "[C]"
+		end);
 
-        if not result then
-            return false, "NETWORK"
-        end
+		if result then
+			return out;
+		end;    
 
-        -- Pelican OV2.5 trả JSON
-        local data = nil
-        pcall(function()
-            data = game:GetService("HttpService"):JSONDecode(response)
-        end)
+		return false;
+	end;
 
-        if not data then
-            return false, "BAD_JSON"
-        end
+	task.wait(1);
 
-        if data.success == true then
-            return true, "VALID"
-        else
-            return false, data.code or "INVALID"
-        end
-    end
+	local IsInternal = InternalTest();
 
-    --------------------------------------------
-    --            KEY SYSTEM UI
-    --------------------------------------------
-    local function LoadKeySystem()
-        Window:AddLabel("Hệ thống khóa OV2.5", "Thành công")
+	if IsInternal then
+		LoaderWindow:AddLabel("Nội bộ","Thành công");
+	else
+		LoaderWindow:AddLabel("Bên ngoài","Cảnh báo");
 
-        Window:Whitelist({
-            {
-                Text = "Lấy khóa",
-                Callback = function()
-                    setclipboard("https://pelican-development.net/keys")
-                end,
-            },
-            {
-                Text = "Đăng nhập",
-                Callback = function(inputKey)
-                    Window:AddLabel("Đang xác minh...", "Đang xử lý")
+		if not SecondLoader and not SupportedExternal then
+			task.wait();
+			LoaderWindow:AddLabel("Trình thực thi không được hỗ trợ","Cảnh báo");
 
-                    local ok, status = CheckKey(inputKey)
+			task.delay(3, function()
+				LoaderWindow:Close();
+			end);
 
-                    if ok then
-                        writefile(LICENSE_FILE, inputKey)
-                        getgenv().script_key = inputKey
-                        Window:CloseWhitelist()
-                    else
-                        Window:WLWarning("Thất bại", "Key sai: "..status)
-                    end
-                end,
-            }
-        })
-    end
+			return false;
+		end;
+	end;
 
-    --------------------------------------------
-    --       AUTO VERIFY OR ASK FOR KEY
-    --------------------------------------------
-    if isfile(LICENSE_FILE) then
-        local saved = readfile(LICENSE_FILE)
-        Window:AddLabel("Đang kiểm tra key đã lưu...", "Thành công")
+	task.wait(1);
 
-        local ok = CheckKey(saved)
-        if ok then
-            getgenv().script_key = saved
-            Window:AddLabel("Key hợp lệ!", "Thành công")
-        else
-            LoadKeySystem()
-        end
-    else
-        LoadKeySystem()
-    end
+	-- ========== KEY VERIFICATION SETUP ==========
+	local sdk_api = loadstring(game:HttpGet("https://sdkapi-public.luarmor.net/library.lua"))();
+	local LoaderLink = (IsInternal and MainLoader) or SecondLoader;
+	local ScriptId = string.match(LoaderLink, "https://api.luarmor.net/files/v3/loaders/(%w+).lua");
 
-    --------------------------------------------
-    --          FINISH LOADING
-    --------------------------------------------
-    task.wait(1.2)
-    Window:AddLabel("Xác thực hoàn tất!", "Thành công")
-    task.delay(1, Window.Close)
+	sdk_api.script_id = ScriptId;
 
-    --------------------------------------------
-    --         LOAD MAIN SCRIPT
-    --------------------------------------------
-    if getgenv().script_key then
-        loadstring(game:HttpGet(MainScriptURL))()
-    end
-end
+	-- ========== CHECK KEY FUNCTION ==========
+	local CheckKey = function(LicenseKey)
+		if not LicenseKey:byte() then
+			task.wait()
+			return false;
+		end;
+
+		local test , message = pcall(sdk_api.check_key , tostring(LicenseKey));
+
+		if test then
+			if message.code == "KEY_VALID" then
+				pcall(function()
+					LoaderWindow:WLWarning("Thành công","KẾT NỐI VỚI MÁY CHỦ");
+				end);
+				return true;
+			elseif message.code == "KEY_EXPIRED" then
+				pcall(function()
+					LoaderWindow:WLWarning("Cảnh báo","Khóa cấp phép đã hết hạn.");
+				end);
+			elseif message.code == "KEY_BANNED" then
+				pcall(function()
+					LoaderWindow:WLWarning("Lỗi","Bạn bị cấm");
+				end);
+			elseif message.code == "KEY_HWID_LOCKED" then
+				pcall(function()
+					LoaderWindow:WLWarning("Lỗi","ID phần cứng không hợp lệ");
+				end);
+			elseif message.code == "KEY_INCORRECT" then
+				pcall(function()
+					LoaderWindow:WLWarning("Lỗi","Khóa không chính xác. Nhấp vào lấy khóa bên dưới");
+				end);
+			elseif message.code == "KEY_INVALID" then
+				pcall(function()
+					LoaderWindow:WLWarning("Lỗi","Khóa cấp phép không hợp lệ");
+				end);
+			end;
+
+			return false;
+		end;
+
+		LoaderWindow:WLWarning("Lỗi","MỘT LỖI");
+		return false;
+	end;
+
+	-- ========== LOAD KEY SYSTEM ==========
+	local LoadKeySystem = function()
+		local RateLimit = false;
+
+		LoaderWindow:AddLabel("Hệ thống khóa","Thành công");
+
+		LoaderWindow:Whitelist({
+			{
+				Text = "Lấy khóa",
+				Callback = function()
+					(setclipboard or toclipboard)("https://arceney.cc/key")
+				end,
+			},
+			{
+				Text = "Đăng nhập",
+				Callback = function(LicenseKey)
+					if RateLimit then
+						return;
+					end;
+
+					RateLimit = true;
+
+					if CheckKey(tostring(LicenseKey)) then
+						getgenv().script_key = tostring(LicenseKey);
+						getfenv().script_key = tostring(LicenseKey);
+						script_key = LicenseKey;
+
+						writefile(LicenseKeyCache , LicenseKey);
+
+						task.wait(0.5);
+
+						return LoaderWindow:CloseWhitelist();
+					end;
+
+					RateLimit = false;
+
+					return false;
+				end,
+			}
+		});
+
+		task.wait(0.1);
+	end;
+
+	-- ========== KEY VERIFICATION PROCESS ==========
+	if not script_key then
+		if isfile(LicenseKeyCache) then
+			local Key = readfile(LicenseKeyCache);
+
+			LoaderWindow:AddLabel("Đang kiểm tra khóa ...","Thành công");
+
+			if CheckKey(tostring(Key)) then
+				getgenv().script_key = tostring(Key);
+				getfenv().script_key = tostring(Key);
+
+				LoaderWindow:AddLabel("Danh sách cho phép!","Thành công");
+			else
+				LoadKeySystem();
+			end;
+		else
+			LoadKeySystem();
+		end;
+	else
+		LoaderWindow:AddLabel("Đang kiểm tra khóa ...","Thành công");
+
+		task.wait(0.1);
+
+		if not CheckKey(tostring(script_key)) then
+			LoaderWindow:AddLabel("Khóa không hợp lệ","Lỗi");
+
+			LoadKeySystem();
+		else
+			LoaderWindow:AddLabel("Danh sách cho phép!","Thành công");
+		end;
+	end;
+
+	task.wait(0.5);
+
+	LoaderWindow:AddLabel("Xác thực hoàn tất!","Thành công");
+
+	task.delay(1.5, LoaderWindow.Close);
+
+	-- ========== KEY VERIFIED - READY FOR MAIN SCRIPT ==========
+	-- Script chính sẽ load sau đây
+	-- Không load UI Fatality ở đây
+
+	return true;
+end;
