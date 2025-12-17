@@ -1953,4 +1953,27 @@ MainTab:CreateSlider({
 
 MainTab:CreateDropdown({
     Text = "Select Option",
-    Options = {"Option 1", "Option 2", "Option 
+    Options = {"Option 1", "Option 2", "Option 3"},
+    Default = "Option 1",
+    Flag = "SelectedOption",
+    Callback = function(option)
+        print("Selected:", option)
+    end
+})
+
+MainTab:CreateInput({
+    Text = "Username",
+    Placeholder = "Enter username...",
+    Default = "",
+    Flag = "Username",
+    Callback = function(text)
+        print("Input:", text)
+    end
+})
+
+-- Save/Load configs
+Library:SaveConfig("myconfig")
+Library:LoadConfig("myconfig")
+--]]
+
+return lib
