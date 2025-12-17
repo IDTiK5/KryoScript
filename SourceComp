@@ -2646,415 +2646,621 @@ function Compkiller:Security(directory: string,Config: SecurityConfig) -- Securi
 	Compkiller.CacheDirectory = directory;
 end;
 
-function Compkiller:_AddColorPickerPanel(Button: ImageButton, Callback: (Color: Color3, Transparency: number) -> any?)
-	local Window = Compkiller:_GetWindowFromElement(Button)
-	local BaseZ_Index = math.random(1, 15) * 100
+function Compkiller:_AddColorPickerPanel(Button: ImageButton , Callback: (Color: Color3) -> any?)
+	local Window = Compkiller:_GetWindowFromElement(Button);
+	local BaseZ_Index = math.random(1,15) * 100;
 
-	-- Cache frequently used services
-	local Mouse = Compkiller.Mouse or game:GetService("Players").LocalPlayer:GetMouse()
-	
-	-- Reuse TweenInfo objects (don't create new ones each time)
-	local TweenFast = TweenInfo.new(0.2, Enum.EasingStyle.Quad)
-	local TweenSlow = TweenInfo.new(0.275, Enum.EasingStyle.Quad)
+	local ColorPickerWindow = Instance.new("Frame")
+	local UIStroke = Instance.new("UIStroke")
+	local UICorner = Instance.new("UICorner")
+	local ColorPickBox = Instance.new("ImageLabel")
+	local MouseMovement = Instance.new("ImageLabel")
+	local UICorner_2 = Instance.new("UICorner")
+	local UIStroke_2 = Instance.new("UIStroke")
+	local ColorRedGreenBlue = Instance.new("Frame")
+	local UIGradient = Instance.new("UIGradient")
+	local UICorner_3 = Instance.new("UICorner")
+	local ColorRGBSlide = Instance.new("Frame")
+	local Left = Instance.new("Frame")
+	local UIStroke_3 = Instance.new("UIStroke")
+	local Right = Instance.new("Frame")
+	local UIStroke_4 = Instance.new("UIStroke")
+	local ColorOpc = Instance.new("Frame")
+	local UICorner_4 = Instance.new("UICorner")
+	local ColorOptSlide = Instance.new("Frame")
+	local Left_2 = Instance.new("Frame")
+	local UIStroke_5 = Instance.new("UIStroke")
+	local Right_2 = Instance.new("Frame")
+	local UIStroke_6 = Instance.new("UIStroke")
+	local UIGradient_2 = Instance.new("UIGradient")
+	local UIStroke_7 = Instance.new("UIStroke")
+	local TransparentImage = Instance.new("ImageLabel")
+	local UICorner_5 = Instance.new("UICorner")
+	local HexFrame = Instance.new("Frame")
+	local UICorner_6 = Instance.new("UICorner")
+	local UIStroke_8 = Instance.new("UIStroke")
+	local TextLabel = Instance.new("TextLabel")
 
-	-- Batch create instances with properties
-	local function CreateInstance(className, properties)
-		local inst = Instance.new(className)
-		for prop, value in pairs(properties) do
-			inst[prop] = value
-		end
-		return inst
-	end
+	ColorPickerWindow.Name = Compkiller:_RandomString()
+	ColorPickerWindow.Parent = Window
+	ColorPickerWindow.BackgroundColor3 = Compkiller.Colors.BlockBackground
+	ColorPickerWindow.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorPickerWindow.BorderSizePixel = 0
+	ColorPickerWindow.Position = UDim2.new(123, 0, 123, 0)
+	ColorPickerWindow.Size = UDim2.new(0, 175, 0, 200)
+	ColorPickerWindow.ZIndex = BaseZ_Index
+	ColorPickerWindow.AnchorPoint = Vector2.new(0.5,0)
+	ColorPickerWindow.Active = true;
 
-	-- Main container
-	local ColorPickerWindow = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = Window,
-		BackgroundColor3 = Compkiller.Colors.BlockBackground,
-		BorderSizePixel = 0,
-		Position = UDim2.new(123, 0, 123, 0),
-		Size = UDim2.new(0, 175, 0, 200),
-		ZIndex = BaseZ_Index,
-		AnchorPoint = Vector2.new(0.5, 0),
-		Active = true,
-		Visible = false,
-		BackgroundTransparency = 1
-	})
-
-	local UIStroke = CreateInstance("UIStroke", {
-		Color = Compkiller.Colors.HighStrokeColor,
-		Parent = ColorPickerWindow,
-		Transparency = 1
-	})
-
-	CreateInstance("UICorner", {CornerRadius = UDim.new(0, 6), Parent = ColorPickerWindow})
-
-	-- Color pick box
-	local ColorPickBox = CreateInstance("ImageLabel", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorPickerWindow,
-		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
-		BorderSizePixel = 0,
-		Position = UDim2.new(0, 7, 0, 7),
-		Size = UDim2.new(0, 145, 0, 145),
-		ZIndex = BaseZ_Index + 1,
-		Image = Compkiller:CacheImage("http://www.roblox.com/asset/?id=112554223509763"),
-		BackgroundTransparency = 1,
-		ImageTransparency = 1
-	})
-
-	CreateInstance("UICorner", {CornerRadius = UDim.new(0, 2), Parent = ColorPickBox})
-	CreateInstance("UIStroke", {Color = Color3.fromRGB(29, 29, 29), Parent = ColorPickBox, Transparency = 1})
-
-	local MouseMovement = CreateInstance("ImageLabel", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorPickBox,
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(0, 12, 0, 12),
-		ZIndex = BaseZ_Index + 5,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Image = Compkiller:CacheImage("rbxassetid://4805639000"),
-		ImageTransparency = 1
-	})
-
-	-- Hue slider
-	local ColorRedGreenBlue = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorPickerWindow,
-		AnchorPoint = Vector2.new(1, 0),
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		BorderSizePixel = 0,
-		ClipsDescendants = true,
-		Position = UDim2.new(1, -7, 0, 7),
-		Size = UDim2.new(0, 10, 0, 145),
-		ZIndex = BaseZ_Index + 6,
-		BackgroundTransparency = 1
-	})
-
-	local UIGradient = CreateInstance("UIGradient", {
-		Color = ColorSequence.new{
-			ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
-			ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
-			ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
-			ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
-			ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
-			ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
-			ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))
-		},
-		Rotation = 90,
-		Parent = ColorRedGreenBlue
-	})
-
-	CreateInstance("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ColorRedGreenBlue})
-
-	local ColorRGBSlide = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorRedGreenBlue,
-		AnchorPoint = Vector2.new(0.5, 0),
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		BorderSizePixel = 0,
-		Position = UDim2.new(0.5, 0, 0, 0),
-		Size = UDim2.new(1, 4, 0, 3),
-		ZIndex = BaseZ_Index + 7
-	})
-	CreateInstance("UIStroke", {Parent = ColorRGBSlide, Transparency = 1})
-
-	-- Opacity slider
-	local ColorOpc = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorPickerWindow,
-		BackgroundColor3 = Color3.fromRGB(255, 0, 0),
-		BorderSizePixel = 0,
-		Position = UDim2.new(0, 7, 0, 160),
-		Size = UDim2.new(1, -30, 0, 9),
-		ZIndex = BaseZ_Index + 6,
-		BackgroundTransparency = 1
-	})
-
-	CreateInstance("UICorner", {CornerRadius = UDim.new(1, 0), Parent = ColorOpc})
-	CreateInstance("UIGradient", {
-		Transparency = NumberSequence.new{
-			NumberSequenceKeypoint.new(0.00, 0.00),
-			NumberSequenceKeypoint.new(1.00, 1.00)
-		},
-		Parent = ColorOpc
-	})
-
-	local ColorOptSlide = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorOpc,
-		AnchorPoint = Vector2.new(0, 0.5),
-		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		BorderSizePixel = 0,
-		Position = UDim2.new(0, 0, 0.5, 0),
-		Size = UDim2.new(0, 3, 1, 4),
-		ZIndex = BaseZ_Index + 7
-	})
-	CreateInstance("UIStroke", {Parent = ColorOptSlide, Transparency = 1})
-
-	-- Hex display
-	local HexFrame = CreateInstance("Frame", {
-		Name = Compkiller:_RandomString(),
-		Parent = ColorPickerWindow,
-		AnchorPoint = Vector2.new(0.5, 1),
-		BackgroundColor3 = Compkiller.Colors.BlockColor,
-		BorderSizePixel = 0,
-		Position = UDim2.new(0.5, 0, 1, -5),
-		Size = UDim2.new(1, -16, 0, 20),
-		ZIndex = BaseZ_Index + 205,
-		BackgroundTransparency = 1
-	})
-
-	CreateInstance("UICorner", {CornerRadius = UDim.new(0, 4), Parent = HexFrame})
-	local HexStroke = CreateInstance("UIStroke", {
-		Color = Compkiller.Colors.HighStrokeColor,
-		Parent = HexFrame,
-		Transparency = 1
-	})
-
-	local TextLabel = CreateInstance("TextLabel", {
-		Parent = HexFrame,
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundTransparency = 1,
-		BorderSizePixel = 0,
-		Position = UDim2.new(0.5, 0, 0.5, 0),
-		Size = UDim2.new(1, -10, 1, -5),
-		ZIndex = BaseZ_Index + 206,
-		Font = Enum.Font.Gotham,
-		Text = "#FFFFFF",
-		TextColor3 = Compkiller.Colors.SwitchColor,
-		TextSize = 13,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTransparency = 1
-	})
-
-	-- Register theme elements
-	table.insert(Compkiller.Elements.BlockBackground, {Element = ColorPickerWindow, Property = "BackgroundColor3"})
-	table.insert(Compkiller.Elements.HighStrokeColor, {Element = UIStroke, Property = "Color"})
-	table.insert(Compkiller.Elements.BlockColor, {Element = HexFrame, Property = "BackgroundColor3"})
-	table.insert(Compkiller.Elements.HighStrokeColor, {Element = HexStroke, Property = "Color"})
-	table.insert(Compkiller.Elements.SwitchColor, {Element = TextLabel, Property = "TextColor3"})
+	table.insert(Compkiller.Elements.BlockBackground,{
+		Element = ColorPickerWindow,
+		Property = "BackgroundColor3"
+	});
 
 	Compkiller:_AddDragBlacklist(ColorPickerWindow)
 
-	-- State
+	UIStroke.Color = Compkiller.Colors.HighStrokeColor
+	UIStroke.Parent = ColorPickerWindow
+
+	table.insert(Compkiller.Elements.HighStrokeColor , {
+		Element = UIStroke,
+		Property = "Color"
+	})
+
+	UICorner.CornerRadius = UDim.new(0, 6)
+	UICorner.Parent = ColorPickerWindow
+
+	ColorPickBox.Name = Compkiller:_RandomString()
+	ColorPickBox.Parent = ColorPickerWindow
+	ColorPickBox.BackgroundColor3 = Color3.fromRGB(39, 255, 35)
+	ColorPickBox.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorPickBox.BorderSizePixel = 0
+	ColorPickBox.Position = UDim2.new(0, 7, 0, 7)
+	ColorPickBox.Size = UDim2.new(0, 145, 0, 145)
+	ColorPickBox.ZIndex = BaseZ_Index + 1
+	ColorPickBox.Image = Compkiller:CacheImage("http://www.roblox.com/asset/?id=112554223509763");
+
+	MouseMovement.Name = Compkiller:_RandomString()
+	MouseMovement.Parent = ColorPickBox
+	MouseMovement.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	MouseMovement.BackgroundTransparency = 1.000
+	MouseMovement.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	MouseMovement.BorderSizePixel = 0
+	MouseMovement.Position = UDim2.new(0.822222233, 0, 0.0592592582, 0)
+	MouseMovement.Size = UDim2.new(0, 12, 0, 12)
+	MouseMovement.ZIndex = BaseZ_Index + 5
+	MouseMovement.AnchorPoint = Vector2.new(0.5,0.5)
+	MouseMovement.Image = Compkiller:CacheImage("rbxassetid://4805639000")
+
+	UICorner_2.CornerRadius = UDim.new(0, 2)
+	UICorner_2.Parent = ColorPickBox
+
+	UIStroke_2.Color = Color3.fromRGB(29, 29, 29)
+	UIStroke_2.Parent = ColorPickBox
+
+	ColorRedGreenBlue.Name = Compkiller:_RandomString()
+	ColorRedGreenBlue.Parent = ColorPickerWindow
+	ColorRedGreenBlue.AnchorPoint = Vector2.new(1, 0)
+	ColorRedGreenBlue.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ColorRedGreenBlue.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorRedGreenBlue.BorderSizePixel = 0
+	ColorRedGreenBlue.ClipsDescendants = true
+	ColorRedGreenBlue.Position = UDim2.new(1, -7, 0, 7)
+	ColorRedGreenBlue.Size = UDim2.new(0, 10, 0, 145)
+	ColorRedGreenBlue.ZIndex = BaseZ_Index + 6
+
+	UIGradient.Color = ColorSequence.new{ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.10, Color3.fromRGB(255, 153, 0)), ColorSequenceKeypoint.new(0.20, Color3.fromRGB(203, 255, 0)), ColorSequenceKeypoint.new(0.30, Color3.fromRGB(50, 255, 0)), ColorSequenceKeypoint.new(0.40, Color3.fromRGB(0, 255, 102)), ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(0.60, Color3.fromRGB(0, 101, 255)), ColorSequenceKeypoint.new(0.70, Color3.fromRGB(50, 0, 255)), ColorSequenceKeypoint.new(0.80, Color3.fromRGB(204, 0, 255)), ColorSequenceKeypoint.new(0.90, Color3.fromRGB(255, 0, 153)), ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0))}
+	UIGradient.Rotation = 90
+	UIGradient.Parent = ColorRedGreenBlue
+
+	UICorner_3.CornerRadius = UDim.new(1, 0)
+	UICorner_3.Parent = ColorRedGreenBlue
+
+	ColorRGBSlide.Name = Compkiller:_RandomString()
+	ColorRGBSlide.Parent = ColorRedGreenBlue
+	ColorRGBSlide.AnchorPoint = Vector2.new(0.5, 0)
+	ColorRGBSlide.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ColorRGBSlide.BackgroundTransparency = 1.000
+	ColorRGBSlide.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorRGBSlide.BorderSizePixel = 0
+	ColorRGBSlide.Position = UDim2.new(0.5, 0, 0.5, 0)
+	ColorRGBSlide.Size = UDim2.new(1, 0, 0, 2)
+	ColorRGBSlide.ZIndex = BaseZ_Index + 7
+
+	Left.Name = Compkiller:_RandomString()
+	Left.Parent = ColorRGBSlide
+	Left.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Left.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	Left.BorderSizePixel = 0
+	Left.Size = UDim2.new(0, 2, 1, 0)
+	Left.ZIndex = BaseZ_Index + 100
+
+	UIStroke_3.Parent = Left
+
+	Right.Name = Compkiller:_RandomString()
+	Right.Parent = ColorRGBSlide
+	Right.AnchorPoint = Vector2.new(1, 0)
+	Right.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Right.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	Right.BorderSizePixel = 0
+	Right.Position = UDim2.new(1, 0, 0, 0)
+	Right.Size = UDim2.new(0, 2, 1, 0)
+	Right.ZIndex = BaseZ_Index + 100
+
+	UIStroke_4.Parent = Right
+
+	ColorOpc.Name = Compkiller:_RandomString()
+	ColorOpc.Parent = ColorPickerWindow
+	ColorOpc.BackgroundColor3 = Color3.fromRGB(102, 255, 0)
+	ColorOpc.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorOpc.BorderSizePixel = 0
+	ColorOpc.Position = UDim2.new(0, 7, 0, 160)
+	ColorOpc.Size = UDim2.new(1, -30, 0, 9)
+	ColorOpc.ZIndex = BaseZ_Index + 6
+
+	UICorner_4.CornerRadius = UDim.new(1, 0)
+	UICorner_4.Parent = ColorOpc
+
+	ColorOptSlide.Name = Compkiller:_RandomString()
+	ColorOptSlide.Parent = ColorOpc
+	ColorOptSlide.AnchorPoint = Vector2.new(0, 0.5)
+	ColorOptSlide.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	ColorOptSlide.BackgroundTransparency = 1.000
+	ColorOptSlide.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	ColorOptSlide.BorderSizePixel = 0
+	ColorOptSlide.Position = UDim2.new(0.5, 0, 0.5, 0)
+	ColorOptSlide.Size = UDim2.new(0, 2, 1, 0)
+	ColorOptSlide.ZIndex = BaseZ_Index + 7
+
+	Left_2.Name = Compkiller:_RandomString()
+	Left_2.Parent = ColorOptSlide
+	Left_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Left_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	Left_2.BorderSizePixel = 0
+	Left_2.Size = UDim2.new(1, 0, 0, 2)
+	Left_2.ZIndex = BaseZ_Index + 100
+
+	UIStroke_5.Parent = Left_2
+
+	Right_2.Name = Compkiller:_RandomString()
+	Right_2.Parent = ColorOptSlide
+	Right_2.AnchorPoint = Vector2.new(0, 1)
+	Right_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	Right_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	Right_2.BorderSizePixel = 0
+	Right_2.Position = UDim2.new(0, 0, 1, 0)
+	Right_2.Size = UDim2.new(1, 0, 0, 2)
+	Right_2.ZIndex = BaseZ_Index + 100
+
+	UIStroke_6.Parent = Right_2
+
+	UIGradient_2.Transparency = NumberSequence.new{NumberSequenceKeypoint.new(0.00, 0.00), NumberSequenceKeypoint.new(1.00, 1.00)}
+	UIGradient_2.Parent = ColorOpc
+
+	UIStroke_7.Transparency = 0.500
+	UIStroke_7.Color = Color3.fromRGB(29, 29, 29)
+	UIStroke_7.Parent = ColorOpc
+
+	TransparentImage.Name = Compkiller:_RandomString()
+	TransparentImage.Parent = ColorOpc
+	TransparentImage.BackgroundTransparency = 1.000
+	TransparentImage.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	TransparentImage.BorderSizePixel = 0
+	TransparentImage.Size = UDim2.new(1, 0, 1, 0)
+	TransparentImage.ZIndex = BaseZ_Index + 5
+	TransparentImage.Image = Compkiller:CacheImage("rbxassetid://6198493000")
+	TransparentImage.ImageColor3 = Color3.fromRGB(206, 206, 206)
+	TransparentImage.ScaleType = Enum.ScaleType.Crop
+
+	UICorner_5.CornerRadius = UDim.new(1, 0)
+	UICorner_5.Parent = TransparentImage
+
+	HexFrame.Name = Compkiller:_RandomString()
+	HexFrame.Parent = ColorPickerWindow
+	HexFrame.AnchorPoint = Vector2.new(0.5, 1)
+	HexFrame.BackgroundColor3 = Compkiller.Colors.BlockColor
+	HexFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	HexFrame.BorderSizePixel = 0
+	HexFrame.Position = UDim2.new(0.5, 0, 1, -5)
+	HexFrame.Size = UDim2.new(1, -16, 0, 20)
+	HexFrame.ZIndex = BaseZ_Index + 205
+
+	table.insert(Compkiller.Elements.BlockColor,{
+		Element = HexFrame,
+		Property = "BackgroundColor3"
+	});
+
+	UICorner_6.CornerRadius = UDim.new(0, 4)
+	UICorner_6.Parent = HexFrame
+
+	UIStroke_8.Color = Compkiller.Colors.HighStrokeColor
+	UIStroke_8.Parent = HexFrame
+
+	table.insert(Compkiller.Elements.HighStrokeColor,{
+		Element = UIStroke_8,
+		Property = "Color"
+	});
+
+	TextLabel.Parent = HexFrame
+	TextLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	TextLabel.BackgroundTransparency = 1.000
+	TextLabel.BorderColor3 = Color3.fromRGB(0, 0, 0)
+	TextLabel.BorderSizePixel = 0
+	TextLabel.Position = UDim2.new(0.5, 0, 0.5, 0)
+	TextLabel.Size = UDim2.new(1, -10, 1, -5)
+	TextLabel.ZIndex = BaseZ_Index + 206
+	TextLabel.Font = Enum.Font.Gotham
+	TextLabel.Text = "#FFFFFFF"
+	TextLabel.TextColor3 = Compkiller.Colors.SwitchColor
+	TextLabel.TextSize = 13.000
+	TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+	table.insert(Compkiller.Elements.SwitchColor , {
+		Element = TextLabel,
+		Property = 'TextColor3'
+	});
+
 	local Args = {
+		IsHold = false,
 		IsVisible = false,
-		_connections = {},
-		_isDragging = false,
-		_dragType = nil -- "box", "hue", "opacity"
-	}
+	};
 
-	local H, S, V = 0, 1, 1
-	local Transparency = 0
-	local lastCallbackTime = 0
-	local CALLBACK_THROTTLE = 0.016 -- ~60fps
+	local Tween = TweenInfo.new(0.2 , Enum.EasingStyle.Quad);
+	local Tween2 = TweenInfo.new(0.275 , Enum.EasingStyle.Quad);
 
-	-- Optimized update function with throttling
-	local function UpdateVisuals(skipAnimation)
-		local RealColor = Color3.fromHSV(H, S, V)
-		local HueColor = Color3.fromHSV(H, 1, 1)
+	Compkiller:_AddPropertyEvent(ColorPickerWindow,function(v)
+		ColorPickerWindow.Visible = v;
 
-		if skipAnimation then
-			ColorPickBox.BackgroundColor3 = HueColor
-			ColorOpc.BackgroundColor3 = RealColor
-			MouseMovement.Position = UDim2.fromScale(S, 1 - V)
-			ColorOptSlide.Position = UDim2.new(Transparency, 0, 0.5, 0)
-			ColorRGBSlide.Position = UDim2.new(0.5, 0, H, 0)
+		if Compkiller.PerformanceMode then
+			if ColorPickerWindow.Visible then
+				Compkiller:_SetNilP(ColorPickerWindow , Window);
+			else
+				Compkiller:_SetNilP(ColorPickerWindow , nil);
+			end;
 		else
-			Compkiller:_Animation(ColorPickBox, TweenFast, {BackgroundColor3 = HueColor})
-			Compkiller:_Animation(ColorOpc, TweenFast, {BackgroundColor3 = RealColor})
-			Compkiller:_Animation(MouseMovement, TweenFast, {Position = UDim2.fromScale(S, 1 - V)})
-			Compkiller:_Animation(ColorOptSlide, TweenFast, {Position = UDim2.new(Transparency, 0, 0.5, 0)})
-			Compkiller:_Animation(ColorRGBSlide, TweenFast, {Position = UDim2.new(0.5, 0, H, 0)})
-		end
+			Compkiller:_SetNilP(ColorPickerWindow , Window);
+		end;
+	end)
 
-		TextLabel.Text = "#" .. RealColor:ToHex():upper()
-	end
+	local ToggleUI = function(bool)
+		local IsSame = Args.IsVisible == bool;
 
-	-- Throttled callback
-	local function FireCallback()
-		local now = tick()
-		if now - lastCallbackTime >= CALLBACK_THROTTLE then
-			lastCallbackTime = now
-			Callback(Color3.fromHSV(H, S, V), Transparency)
-		end
-	end
+		Args.IsVisible = bool;
 
-	function Args:SetColor(Color: Color3, TransparencyValue: number)
-		H, S, V = Color:ToHSV()
-		Transparency = TransparencyValue or 0
-		UpdateVisuals(not self.IsVisible)
-	end
+		local MainPosition = UDim2.new(0,Button.AbsolutePosition.X + 95,0,Button.AbsolutePosition.Y + 65);
+		local DropPosition = UDim2.new(0,MainPosition.X.Offset,0,MainPosition.Y.Offset + 15);
+
+		local MUL = Window.AbsoluteSize.Y / 2;
+
+		if MainPosition.Y.Offset > MUL then -- go up
+			MainPosition = UDim2.fromOffset(Button.AbsolutePosition.X,Button.AbsolutePosition.Y + 45);
+			DropPosition = UDim2.fromOffset(MainPosition.X.Offset,MainPosition.Y.Offset - 25);
+
+			ColorPickerWindow.AnchorPoint = Vector2.new(0.5,1)
+		else
+			ColorPickerWindow.AnchorPoint = Vector2.new(0.5,0)
+		end;
+
+		if bool then
+
+			if not IsSame then
+				ColorPickerWindow.Position = DropPosition
+			end;
+
+			Compkiller:_Animation(ColorPickerWindow,Tween2,{
+				BackgroundTransparency = 0,
+				Size = UDim2.new(0, 175, 0, 200)
+			});
+
+			Compkiller:_Animation(ColorPickerWindow,Tween,{
+				Position = MainPosition,
+			});
+
+			Compkiller:_Animation(UIStroke_8,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke_7,Tween,{
+				Transparency = 0.5
+			});
+
+			Compkiller:_Animation(UIStroke_6,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke_5,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke_4,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke_3,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke_2,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(UIStroke,Tween,{
+				Transparency = 0
+			});
+
+			Compkiller:_Animation(ColorPickBox,Tween,{
+				BackgroundTransparency = 0,
+				ImageTransparency = 0
+			});
+
+			Compkiller:_Animation(MouseMovement,Tween,{
+				ImageTransparency = 0
+			});
+
+			Compkiller:_Animation(ColorOpc,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(TransparentImage,Tween,{
+				ImageTransparency = 0
+			});
+
+			Compkiller:_Animation(Left,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(Left_2,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(Right,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(Right_2,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(ColorRedGreenBlue,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(HexFrame,Tween,{
+				BackgroundTransparency = 0
+			});
+
+			Compkiller:_Animation(TextLabel,Tween,{
+				TextTransparency = 0
+			});
+		else
+			Compkiller:_Animation(UIStroke_8,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_7,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_6,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_5,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_4,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_3,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke_2,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(UIStroke,Tween,{
+				Transparency = 1
+			});
+
+			Compkiller:_Animation(ColorPickerWindow,Tween2,{
+				BackgroundTransparency = 1,
+			});
+
+			Compkiller:_Animation(ColorPickerWindow,Tween,{
+				Position = DropPosition,
+			});
+
+			Compkiller:_Animation(ColorPickBox,Tween,{
+				BackgroundTransparency = 1,
+				ImageTransparency = 1
+			});
+
+			Compkiller:_Animation(MouseMovement,Tween,{
+				ImageTransparency = 1
+			});
+
+			Compkiller:_Animation(ColorOpc,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(TransparentImage,Tween,{
+				ImageTransparency = 1
+			});
+
+			Compkiller:_Animation(Left,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(Left_2,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(Right,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(Right_2,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(ColorRedGreenBlue,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(HexFrame,Tween,{
+				BackgroundTransparency = 1
+			});
+
+			Compkiller:_Animation(TextLabel,Tween,{
+				TextTransparency = 1
+			});
+		end;
+	end;
+
+	Button.MouseButton1Click:Connect(function()
+		ToggleUI(true);
+	end)
+
+	local H , S , V = 0,0,0;
+	local Transparency = 0;
+
+	function Args:SetColor(Color: Color3 , TransparencyValue: number)
+		H , S , V = Color:ToHSV();
+		Transparency = TransparencyValue;
+	end;
 
 	function Args:Update()
-		UpdateVisuals(false)
-		FireCallback()
-	end
+		local MainColor = Color3.fromHSV(H , S , 1);
+		local RealColor = Color3.fromHSV(H , S , V);
 
-	-- Batch animate show/hide
-	local function SetElementsTransparency(transparent)
-		local value = transparent and 1 or 0
-		local props = {Transparency = value}
-		local bgProps = {BackgroundTransparency = value}
-		local imgProps = {ImageTransparency = value}
-		local txtProps = {TextTransparency = value}
+		Compkiller:_Animation(ColorPickBox,TweenInfo.new(0.2),{
+			BackgroundColor3 = Color3.fromHSV(H , 1 , 1)
+		});
 
-		Compkiller:_Animation(ColorPickerWindow, TweenSlow, {BackgroundTransparency = value})
-		Compkiller:_Animation(UIStroke, TweenFast, props)
-		Compkiller:_Animation(ColorPickBox, TweenFast, {BackgroundTransparency = value, ImageTransparency = value})
-		Compkiller:_Animation(MouseMovement, TweenFast, imgProps)
-		Compkiller:_Animation(ColorRedGreenBlue, TweenFast, bgProps)
-		Compkiller:_Animation(ColorRGBSlide, TweenFast, bgProps)
-		Compkiller:_Animation(ColorOpc, TweenFast, bgProps)
-		Compkiller:_Animation(ColorOptSlide, TweenFast, bgProps)
-		Compkiller:_Animation(HexFrame, TweenFast, bgProps)
-		Compkiller:_Animation(HexStroke, TweenFast, props)
-		Compkiller:_Animation(TextLabel, TweenFast, txtProps)
-	end
+		Compkiller:_Animation(ColorOpc,TweenInfo.new(0.2),{
+			BackgroundColor3 = RealColor
+		});
 
-	local function ToggleUI(show)
-		if Args.IsVisible == show then return end
-		Args.IsVisible = show
+		Compkiller:_Animation(MouseMovement,TweenInfo.new(0.2),{
+			Position = UDim2.fromScale(S , 1 - V)
+		});
 
-		local btnPos = Button.AbsolutePosition
-		local windowHalf = Window.AbsoluteSize.Y / 2
-		local goUp = btnPos.Y > windowHalf
+		Compkiller:_Animation(ColorOptSlide,TweenInfo.new(0.2),{
+			Position = UDim2.new(Transparency ,0 , 0.5 ,0)
+		});
 
-		if goUp then
-			ColorPickerWindow.AnchorPoint = Vector2.new(0.5, 1)
-		else
-			ColorPickerWindow.AnchorPoint = Vector2.new(0.5, 0)
-		end
+		Compkiller:_Animation(ColorRGBSlide,TweenInfo.new(0.2),{
+			Position = UDim2.new(0.5 ,0 , H ,0)
+		});
 
-		local mainY = goUp and (btnPos.Y + 45) or (btnPos.Y + 65)
-		local mainPos = UDim2.fromOffset(btnPos.X + 95, mainY)
-		local dropOffset = goUp and -25 or 15
-		local dropPos = UDim2.fromOffset(mainPos.X.Offset, mainPos.Y.Offset + dropOffset)
+		TextLabel.Text = "#" .. tostring(RealColor:ToHex())
 
-		if show then
-			ColorPickerWindow.Visible = true
-			ColorPickerWindow.Position = dropPos
-			Compkiller:_Animation(ColorPickerWindow, TweenFast, {Position = mainPos})
-			SetElementsTransparency(false)
-		else
-			Compkiller:_Animation(ColorPickerWindow, TweenFast, {Position = dropPos})
-			SetElementsTransparency(true)
-			task.delay(0.3, function()
-				if not Args.IsVisible then
-					ColorPickerWindow.Visible = false
-				end
-			end)
-		end
+		Callback(RealColor , Transparency);
+	end;
 
-		if Compkiller.PerformanceMode then
-			Compkiller:_SetNilP(ColorPickerWindow, show and Window or nil)
-		end
-	end
+	local SPAWN_THREAD;
 
-	-- Unified drag handler using RenderStepped for smooth updates
-	local dragConnection = nil
+	ColorPickerWindow.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Args.IsHold = true;
 
-	local function StartDrag(dragType)
-		if dragConnection then return end
-		
-		Args._isDragging = true
-		Args._dragType = dragType
+			if SPAWN_THREAD then
+				task.cancel(SPAWN_THREAD);
+				SPAWN_THREAD = nil;
+			end;
 
-		dragConnection = game:GetService("RunService").RenderStepped:Connect(function()
-			if not Args._isDragging then return end
+			SPAWN_THREAD = task.spawn(function()
+				while true do task.wait(0.00001)
+					if not Args.IsHold then
+						break;	
+					end;
 
-			if dragType == "box" then
-				local posX, posY = ColorPickBox.AbsolutePosition.X, ColorPickBox.AbsolutePosition.Y
-				local sizeX, sizeY = ColorPickBox.AbsoluteSize.X, ColorPickBox.AbsoluteSize.Y
-				S = math.clamp((Mouse.X - posX) / sizeX, 0, 1)
-				V = 1 - math.clamp((Mouse.Y - posY) / sizeY, 0, 1)
-			elseif dragType == "hue" then
-				local posY = ColorRedGreenBlue.AbsolutePosition.Y
-				local sizeY = ColorRedGreenBlue.AbsoluteSize.Y
-				H = math.clamp((Mouse.Y - posY) / sizeY, 0, 1)
-			elseif dragType == "opacity" then
-				local posX = ColorOpc.AbsolutePosition.X
-				local sizeX = ColorOpc.AbsoluteSize.X
-				Transparency = math.clamp((Mouse.X - posX) / sizeX, 0, 1)
+					Callback(Color3.fromHSV(H , S , V),Transparency);
+				end;
+			end);
+		end;
+	end)
+
+	ColorPickerWindow.InputEnded:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Args.IsHold = false;
+
+			if SPAWN_THREAD then
+				task.cancel(SPAWN_THREAD);
+				SPAWN_THREAD = nil;
+			end;
+		end;
+	end)
+
+	UserInputService.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			if not Compkiller:_IsMouseOverFrame(ColorPickerWindow) then
+				ToggleUI(false);
+			end;
+		end;
+	end)
+
+	ColorRedGreenBlue.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Args.IsHold = true;
+
+			while (UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Args.IsHold) do task.wait()
+				local ColorY = ColorRedGreenBlue.AbsolutePosition.Y
+				local ColorYM = ColorY + ColorRedGreenBlue.AbsoluteSize.Y;
+				local Value = math.clamp(Mouse.Y, ColorY, ColorYM)
+				local Code = ((Value - ColorY) / (ColorYM - ColorY));
+
+				H = Code;
+
+				Args:Update();
+			end;
+		end;
+	end);
+
+	ColorOpc.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Args.IsHold = true;
+
+			while (UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Args.IsHold) do task.wait()
+				local transparency = math.clamp((((Mouse.X) - ColorOpc.AbsolutePosition.X) / ColorOpc.AbsoluteSize.X), 0, 1);
+				local RealColor = Color3.fromHSV(H , S , V);
+
+				TextLabel.Text = "#" .. tostring(RealColor:ToHex())
+
+				Transparency = transparency;
+
+				Args:Update();
+			end;
+		end;
+	end);
+
+	ColorPickBox.InputBegan:Connect(function(Input)
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+			Args.IsHold = true;
+
+			while (UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Args.IsHold) do task.wait();
+				local PosX = ColorPickBox.AbsolutePosition.X
+				local ScaleX = PosX + ColorPickBox.AbsoluteSize.X
+				local Value, PosY = math.clamp(Mouse.X, PosX, ScaleX), ColorPickBox.AbsolutePosition.Y
+				local ScaleY = PosY + ColorPickBox.AbsoluteSize.Y
+				local Vals = math.clamp(Mouse.Y, PosY, ScaleY)
+				local RealColor = Color3.fromHSV(H , S , V);
+
+				S = (Value - PosX) / (ScaleX - PosX);
+				V = (1 - ((Vals - PosY) / (ScaleY - PosY)));
+
+				TextLabel.Text = "#" .. tostring(RealColor:ToHex())
+
+				Args:Update();
 			end
-
-			UpdateVisuals(true) -- Skip animation during drag for performance
-			FireCallback()
-		end)
-	end
-
-	local function StopDrag()
-		Args._isDragging = false
-		Args._dragType = nil
-		if dragConnection then
-			dragConnection:Disconnect()
-			dragConnection = nil
-		end
-		UpdateVisuals(false) -- Animate to final position
-	end
-
-	-- Input handlers
-	local function ConnectDrag(element, dragType)
-		local conn = element.InputBegan:Connect(function(input)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-			   input.UserInputType == Enum.UserInputType.Touch then
-				StartDrag(dragType)
-			end
-		end)
-		table.insert(Args._connections, conn)
-	end
-
-	ConnectDrag(ColorPickBox, "box")
-	ConnectDrag(ColorRedGreenBlue, "hue")
-	ConnectDrag(ColorOpc, "opacity")
-
-	-- Global input end
-	table.insert(Args._connections, UserInputService.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-		   input.UserInputType == Enum.UserInputType.Touch then
-			StopDrag()
-		end
-	end))
-
-	-- Click outside to close
-	table.insert(Args._connections, UserInputService.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or 
-		   input.UserInputType == Enum.UserInputType.Touch then
-			if Args.IsVisible and not Compkiller:_IsMouseOverFrame(ColorPickerWindow) then
-				ToggleUI(false)
-			end
-		end
-	end))
-
-	-- Button click
-	table.insert(Args._connections, Button.MouseButton1Click:Connect(function()
-		ToggleUI(not Args.IsVisible)
-	end))
-
-	-- Cleanup function
-	function Args:Destroy()
-		StopDrag()
-		for _, conn in ipairs(self._connections) do
-			conn:Disconnect()
-		end
-		self._connections = {}
-		ColorPickerWindow:Destroy()
-	end
-
-	-- Performance mode handling
-	Compkiller:_AddPropertyEvent(ColorPickerWindow, function(v)
-		ColorPickerWindow.Visible = v
-		if Compkiller.PerformanceMode then
-			Compkiller:_SetNilP(ColorPickerWindow, v and Window or nil)
 		end
 	end)
 
-	return Args
-end
-
+	return Args;
+end;
 
 function Compkiller:_DrawKeybinds(Window: ScreenGui)
 	if Compkiller.__KEYBINDS_CACHE then
@@ -4906,347 +5112,301 @@ function Compkiller:_LoadElement(Parent: Frame , EnabledLine: boolean , Signal ,
 		return Args;
 	end;
 
-	function Args:AddSlider(Config: Slider)
-		Config = Compkiller.__CONFIG(Config , {
-			Name = 'Slider',
-			Default = 50,
-			Min = 0,
-			Max = 100,
-			Type = "",
-			Round = 0,
-			Callback = function() end
-		});
+	-- Tạo một global InputChanged listener duy nhất (đặt ở ngoài function)
+if not Compkiller._SliderInputHandler then
+    Compkiller._ActiveSliders = {}
+    Compkiller._SliderInputHandler = UserInputService.InputChanged:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+            for slider, data in pairs(Compkiller._ActiveSliders) do
+                if data.IsHold then
+                    if UserInputService.TouchEnabled then
+                        if not Compkiller:_IsMouseOverFrame(data.SliderBar) then
+                            data.IsHold = false
+                        else
+                            data.Update(Input)
+                        end
+                    else
+                        data.Update(Input)
+                    end
+                end
+            end
+        end
+    end)
+end
 
-		local Slider = Instance.new("Frame")
-		local BlockText = Instance.new("TextLabel")
-		local BlockLine = Instance.new("Frame")
-		local SliderBar = Instance.new("Frame")
-		local UIStroke = Instance.new("UIStroke")
-		local UICorner = Instance.new("UICorner")
-		local SliderInput = Instance.new("Frame")
-		local UICorner_2 = Instance.new("UICorner")
-		local Frame = Instance.new("Frame")
-		local UICorner_3 = Instance.new("UICorner")
-		local UIScale = Instance.new("UIScale")
-		local ValueText = Instance.new("TextLabel")
+function Args:AddSlider(Config: Slider)
+    Config = Compkiller.__CONFIG(Config, {
+        Name = 'Slider',
+        Default = 50,
+        Min = 0,
+        Max = 100,
+        Type = "",
+        Round = 0,
+        Callback = function() end
+    })
 
-		Compkiller:_AddDragBlacklist(Slider);
+    -- Cache các giá trị thường dùng
+    local Colors = Compkiller.Colors
+    local Elements = Compkiller.Elements
+    local randomName = Compkiller:_RandomString()
+    
+    -- Tính toán trước
+    local initialSize = math.max((Config.Default - Config.Min) / (Config.Max - Config.Min), 0.045)
+    local valueRange = Config.Max - Config.Min
 
-		Slider.Name = Compkiller:_RandomString()
-		Slider.Parent = Parent
-		Slider.BackgroundTransparency = 1.000
-		Slider.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		Slider.BorderSizePixel = 0
-		Slider.Size = UDim2.new(1, -1, 0, 45)
-		Slider.ZIndex = Zindex + 1
+    -- Tạo instances với properties cùng lúc (giảm property assignments)
+    local Slider = Instance.new("Frame")
+    Slider.Name = randomName
+    Slider.Parent = Parent
+    Slider.BackgroundTransparency = 1
+    Slider.BorderSizePixel = 0
+    Slider.Size = UDim2.new(1, -1, 0, 45)
+    Slider.ZIndex = Zindex + 1
 
-		BlockText.Name = Compkiller:_RandomString()
-		BlockText.Parent = Slider
-		BlockText.BackgroundTransparency = 1.000
-		BlockText.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		BlockText.BorderSizePixel = 0
-		BlockText.Position = UDim2.new(0, 12, 0, 1)
-		BlockText.Size = UDim2.new(1, -20, 0, 25)
-		BlockText.ZIndex = Zindex + 2
-		BlockText.Font = Enum.Font.GothamMedium
-		BlockText.Text = Config.Name
-		BlockText.TextColor3 = Compkiller.Colors.SwitchColor
-		BlockText.TextSize = 14.000
-		BlockText.TextTransparency = 0.100
-		BlockText.TextXAlignment = Enum.TextXAlignment.Left
+    Compkiller:_AddDragBlacklist(Slider)
 
-		table.insert(Compkiller.Elements.SwitchColor , {
-			Element = BlockText,
-			Property = 'TextColor3'
-		});
+    local BlockText = Instance.new("TextLabel")
+    BlockText.Parent = Slider
+    BlockText.BackgroundTransparency = 1
+    BlockText.BorderSizePixel = 0
+    BlockText.Position = UDim2.new(0, 12, 0, 1)
+    BlockText.Size = UDim2.new(1, -20, 0, 25)
+    BlockText.ZIndex = Zindex + 2
+    BlockText.Font = Enum.Font.GothamMedium
+    BlockText.Text = Config.Name
+    BlockText.TextColor3 = Colors.SwitchColor
+    BlockText.TextSize = 14
+    BlockText.TextTransparency = 0.1
+    BlockText.TextXAlignment = Enum.TextXAlignment.Left
 
-		BlockLine.Name = Compkiller:_RandomString()
-		BlockLine.Parent = Slider
-		BlockLine.AnchorPoint = Vector2.new(0.5, 1)
-		BlockLine.BackgroundColor3 = Compkiller.Colors.LineColor
-		BlockLine.BackgroundTransparency = 0.500
-		BlockLine.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		BlockLine.BorderSizePixel = 0
-		BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
-		BlockLine.Size = UDim2.new(1, -26, 0, 1)
-		BlockLine.ZIndex = Zindex + 2
-		BlockLine.Visible = EnabledLine or false;
+    local BlockLine = Instance.new("Frame")
+    BlockLine.Parent = Slider
+    BlockLine.AnchorPoint = Vector2.new(0.5, 1)
+    BlockLine.BackgroundColor3 = Colors.LineColor
+    BlockLine.BackgroundTransparency = 0.5
+    BlockLine.BorderSizePixel = 0
+    BlockLine.Position = UDim2.new(0.5, 0, 1, 0)
+    BlockLine.Size = UDim2.new(1, -26, 0, 1)
+    BlockLine.ZIndex = Zindex + 2
+    BlockLine.Visible = EnabledLine or false
 
-		table.insert(Compkiller.Elements.LineColor,{
-			Element = BlockLine,
-			Property = "BackgroundColor3"
-		});
+    local SliderBar = Instance.new("Frame")
+    SliderBar.Parent = Slider
+    SliderBar.AnchorPoint = Vector2.new(0.5, 1)
+    SliderBar.BackgroundColor3 = Colors.DropColor
+    SliderBar.BorderSizePixel = 0
+    SliderBar.ClipsDescendants = true
+    SliderBar.Position = UDim2.new(0.5, 0, 1, -9)
+    SliderBar.Size = UDim2.new(1, -25, 0, 10)
+    SliderBar.ZIndex = Zindex + 3
 
-		SliderBar.Name = Compkiller:_RandomString()
-		SliderBar.Parent = Slider
-		SliderBar.AnchorPoint = Vector2.new(0.5, 1)
-		SliderBar.BackgroundColor3 = Compkiller.Colors.DropColor
-		SliderBar.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		SliderBar.BorderSizePixel = 0
-		SliderBar.ClipsDescendants = true
-		SliderBar.Position = UDim2.new(0.5, 0, 1, -9)
-		SliderBar.Size = UDim2.new(1, -25, 0, 10)
-		SliderBar.ZIndex = Zindex + 3
+    local UIStroke = Instance.new("UIStroke")
+    UIStroke.Color = Colors.StrokeColor
+    UIStroke.Parent = SliderBar
 
-		table.insert(Compkiller.Elements.DropColor , {
-			Element = SliderBar,
-			Property = "BackgroundColor3"
-		})
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 6)
+    UICorner.Parent = SliderBar
 
-		UIStroke.Color = Compkiller.Colors.StrokeColor
-		UIStroke.Parent = SliderBar
+    local SliderInput = Instance.new("Frame")
+    SliderInput.Parent = SliderBar
+    SliderInput.AnchorPoint = Vector2.new(0, 0.5)
+    SliderInput.BackgroundColor3 = Colors.Highlight
+    SliderInput.BorderSizePixel = 0
+    SliderInput.Position = UDim2.new(0, 0, 0.5, 0)
+    SliderInput.Size = UDim2.new(initialSize, 0, 1, 0)
+    SliderInput.ZIndex = Zindex + 4
 
-		table.insert(Compkiller.Elements.StrokeColor,{
-			Element = UIStroke,
-			Property = "Color"
-		});
+    local UICorner_2 = Instance.new("UICorner")
+    UICorner_2.CornerRadius = UDim.new(0, 6)
+    UICorner_2.Parent = SliderInput
 
-		UICorner.CornerRadius = UDim.new(0, 6)
-		UICorner.Parent = SliderBar
+    local Frame = Instance.new("Frame")
+    Frame.Parent = SliderInput
+    Frame.AnchorPoint = Vector2.new(1, 0.5)
+    Frame.BackgroundColor3 = Colors.SwitchColor
+    Frame.BorderSizePixel = 0
+    Frame.Position = UDim2.new(1, 5, 0.5, 0)
+    Frame.Rotation = 45
+    Frame.Size = UDim2.new(1, 0, 1, 0)
+    Frame.SizeConstraint = Enum.SizeConstraint.RelativeYY
+    Frame.ZIndex = Zindex + 6
 
-		SliderInput.Name = Compkiller:_RandomString()
-		SliderInput.Parent = SliderBar
-		SliderInput.AnchorPoint = Vector2.new(0, 0.5)
-		SliderInput.BackgroundColor3 = Compkiller.Colors.Highlight
-		SliderInput.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		SliderInput.BorderSizePixel = 0
-		SliderInput.Position = UDim2.new(0, 0, 0.5, 0)
-		SliderInput.Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
-		SliderInput.ZIndex = Zindex + 4
+    local UICorner_3 = Instance.new("UICorner")
+    UICorner_3.CornerRadius = UDim.new(3, 0)
+    UICorner_3.Parent = Frame
 
-		table.insert(Compkiller.Elements.Highlight,{
-			Element = SliderInput,
-			Property = "BackgroundColor3"
-		});
+    local UIScale = Instance.new("UIScale")
+    UIScale.Scale = 1.3
+    UIScale.Parent = Frame
 
-		UICorner_2.CornerRadius = UDim.new(0, 6)
-		UICorner_2.Parent = SliderInput
+    local ValueText = Instance.new("TextLabel")
+    ValueText.Parent = Slider
+    ValueText.BackgroundTransparency = 1
+    ValueText.BorderSizePixel = 0
+    ValueText.Position = UDim2.new(0, 12, 0, 1)
+    ValueText.Size = UDim2.new(1, -20, 0, 25)
+    ValueText.ZIndex = Zindex + 4
+    ValueText.Font = Enum.Font.GothamMedium
+    ValueText.Text = tostring(Config.Default) .. tostring(Config.Type)
+    ValueText.TextColor3 = Colors.SwitchColor
+    ValueText.TextSize = 12
+    ValueText.TextTransparency = 0.75
+    ValueText.TextXAlignment = Enum.TextXAlignment.Right
 
-		Frame.Parent = SliderInput
-		Frame.AnchorPoint = Vector2.new(1, 0.5)
-		Frame.BackgroundColor3 = Compkiller.Colors.SwitchColor
-		Frame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		Frame.BorderSizePixel = 0
-		Frame.Position = UDim2.new(1, 5, 0.5, 0)
-		Frame.Rotation = 45.000
-		Frame.Size = UDim2.new(1, 0, 1, 0)
-		Frame.SizeConstraint = Enum.SizeConstraint.RelativeYY
-		Frame.ZIndex = Zindex + 6
+    -- Batch insert vào Elements tables
+    local switchColorElements = {
+        {Element = BlockText, Property = 'TextColor3'},
+        {Element = Frame, Property = 'BackgroundColor3'},
+        {Element = ValueText, Property = 'TextColor3'}
+    }
+    for _, v in ipairs(switchColorElements) do
+        table.insert(Elements.SwitchColor, v)
+    end
 
-		table.insert(Compkiller.Elements.SwitchColor , {
-			Element = Frame,
-			Property = 'BackgroundColor3'
-		});
+    table.insert(Elements.LineColor, {Element = BlockLine, Property = "BackgroundColor3"})
+    table.insert(Elements.DropColor, {Element = SliderBar, Property = "BackgroundColor3"})
+    table.insert(Elements.StrokeColor, {Element = UIStroke, Property = "Color"})
+    table.insert(Elements.Highlight, {Element = SliderInput, Property = "BackgroundColor3"})
 
-		UICorner_3.CornerRadius = UDim.new(3, 0)
-		UICorner_3.Parent = Frame
+    -- Cache TweenInfo
+    local tweenInfo02 = TweenInfo.new(0.2)
+    local tweenInfo035 = TweenInfo.new(0.35)
 
-		UIScale.Parent = Frame
-		UIScale.Scale = 1.300
+    -- Hover với debounce
+    local isHovering = false
+    Compkiller:_Hover(SliderBar, function()
+        if not isHovering and Signal:GetValue() then
+            isHovering = true
+            Compkiller:_Animation(ValueText, tweenInfo02, {TextTransparency = 0.2})
+        end
+    end, function()
+        if isHovering and Signal:GetValue() then
+            isHovering = false
+            Compkiller:_Animation(ValueText, tweenInfo02, {TextTransparency = 0.75})
+        end
+    end)
 
-		ValueText.Name = Compkiller:_RandomString()
-		ValueText.Parent = Slider
-		ValueText.BackgroundTransparency = 1.000
-		ValueText.BorderColor3 = Color3.fromRGB(0, 0, 0)
-		ValueText.BorderSizePixel = 0
-		ValueText.Position = UDim2.new(0, 12, 0, 1)
-		ValueText.Size = UDim2.new(1, -20, 0, 25)
-		ValueText.ZIndex = Zindex + 4
-		ValueText.Font = Enum.Font.GothamMedium
-		ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
-		ValueText.TextColor3 = Compkiller.Colors.SwitchColor
-		ValueText.TextSize = 12.000
-		ValueText.TextTransparency = 0.750
-		ValueText.TextXAlignment = Enum.TextXAlignment.Right
+    -- Slider data cho global handler
+    local sliderData = {
+        IsHold = false,
+        SliderBar = SliderBar,
+        Update = nil
+    }
 
-		table.insert(Compkiller.Elements.SwitchColor , {
-			Element = ValueText,
-			Property = 'TextColor3'
-		});
+    -- Update function với cached values
+    local function Update(Input)
+        local absPos = SliderBar.AbsolutePosition.X
+        local absSize = SliderBar.AbsoluteSize.X
+        local sizeScale = math.clamp((Input.Position.X - absPos) / absSize, 0, 1)
+        local main = (valueRange * sizeScale) + Config.Min
+        local value = Compkiller:_Rounding(main, Config.Round)
+        local size = (value - Config.Min) / valueRange
 
-		Compkiller:_Hover(SliderBar,function()
-			if Signal:GetValue() then
-				Compkiller:_Animation(ValueText,TweenInfo.new(0.2),{
-					TextTransparency = 0.2
-				})
-			end;
-		end,function()
-			if Signal:GetValue() then
-				Compkiller:_Animation(ValueText,TweenInfo.new(0.2),{
-					TextTransparency = 0.750
-				})
-			end;
-		end)	
+        TweenService:Create(SliderInput, tweenInfo02, {
+            Size = UDim2.new(math.clamp(size, 0.045, 1), 0, 1, 0)
+        }):Play()
 
-		local IsHold = false;
+        Config.Default = value
+        ValueText.Text = tostring(value) .. Config.Type
+        Config.Callback(value)
+    end
 
-		local Update = function(Input)
-			local SizeScale = math.clamp((((Input.Position.X) - SliderBar.AbsolutePosition.X) / SliderBar.AbsoluteSize.X), 0, 1);
+    sliderData.Update = Update
 
-			local Main = ((Config.Max - Config.Min) * SizeScale) + Config.Min;
+    -- Đăng ký slider vào global handler
+    Compkiller._ActiveSliders[Slider] = sliderData
 
-			local Value = Compkiller:_Rounding(Main,Config.Round);
+    -- Chỉ cần 2 connections thay vì 3
+    SliderBar.InputBegan:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            sliderData.IsHold = true
+            Update(Input)
+        end
+    end)
 
-			local PositionX = UDim2.fromScale(SizeScale, 1);
+    SliderBar.InputEnded:Connect(function(Input)
+        if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+            if UserInputService.TouchEnabled then
+                if not Compkiller:_IsMouseOverFrame(SliderBar) then
+                    sliderData.IsHold = false
+                end
+            else
+                sliderData.IsHold = false
+            end
+        end
+    end)
 
-			local Size = (Value - Config.Min) / (Config.Max - Config.Min);
+    local Args = {}
+    Args.Flag = Config.Flag
 
-			TweenService:Create(SliderInput , TweenInfo.new(0.2),{
-				Size = UDim2.new(math.clamp(Size,0.045,1), 0, 1, 0)
-			}):Play();
+    function Args:SetValue(Value)
+        Config.Default = Value
+        ValueText.Text = tostring(Value) .. Config.Type
+        Compkiller:_Animation(SliderInput, tweenInfo035, {
+            Size = UDim2.new(math.max((Value - Config.Min) / valueRange, 0.045), 0, 1, 0)
+        })
+        Config.Callback(Value)
+    end
 
-			Config.Default = Value;
+    function Args:SetText(str)
+        BlockText.Text = str or Config.Name
+    end
 
-			ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
+    function Args:GetText()
+        return BlockText.Text
+    end
 
-			Config.Callback(Value)
-		end;
+    function Args:GetValue()
+        return Config.Default
+    end
 
-		do
-			SliderBar.InputBegan:Connect(function(Input)
-				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-					IsHold = true
-					Update(Input)
-				end
-			end)
+    -- Signal connection với cached properties
+    local showProps = {
+        {SliderInput, {Size = UDim2.new(math.max((Config.Default - Config.Min) / valueRange, 0.045), 0, 1, 0)}},
+        {ValueText, {TextTransparency = 0.75}},
+        {Frame, {BackgroundTransparency = 0}},
+        {SliderInput, {BackgroundTransparency = 0}},
+        {UIStroke, {Transparency = 0}},
+        {SliderBar, {BackgroundTransparency = 0}},
+        {BlockLine, {BackgroundTransparency = 0.5}},
+        {BlockText, {TextTransparency = 0.1}}
+    }
 
-			SliderBar.InputEnded:Connect(function(Input)
-				if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
-					if UserInputService.TouchEnabled then
-						if not Compkiller:_IsMouseOverFrame(SliderBar) then
-							IsHold = false
-						end;
-					else
-						IsHold = false
-					end;
-				end
-			end)
+    local hideProps = {
+        {SliderInput, {Size = UDim2.new(0, 0, 1, 0)}},
+        {ValueText, {TextTransparency = 1}},
+        {Frame, {BackgroundTransparency = 1}},
+        {SliderInput, {BackgroundTransparency = 1}},
+        {UIStroke, {Transparency = 1}},
+        {SliderBar, {BackgroundTransparency = 1}},
+        {BlockLine, {BackgroundTransparency = 1}},
+        {BlockText, {TextTransparency = 1}}
+    }
 
-			UserInputService.InputChanged:Connect(function(Input)
-				if IsHold then
-					if (Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch)  then
-						if UserInputService.TouchEnabled then
-							if not Compkiller:_IsMouseOverFrame(SliderBar) then
-								IsHold = false
-							else
-								Update(Input)
-							end;
-						else
-							Update(Input)
-						end;
-					end;
-				end;
-			end);
-		end;
+    Args.Signal = Signal:Connect(function(bool)
+        local props = bool and showProps or hideProps
+        for _, data in ipairs(props) do
+            Compkiller:_Animation(data[1], Tween, data[2])
+        end
+    end)
 
-		local Args = {};
+    -- Cleanup khi Slider bị destroy
+    Slider.Destroying:Connect(function()
+        Compkiller._ActiveSliders[Slider] = nil
+    end)
 
-		Args.Flag = Config.Flag;
+    if Config.Flag then
+        Compkiller.Flags[Config.Flag] = Args
+    end
 
-		function Args:SetValue(Value)
-			Config.Default = Value;
+    if not DisableStackKeybind then
+        Args.AutoKeybind = Compkiller:_KeybindHandler(Slider, "Number", Args, Signal, Zindex, Config)
+    end
 
-			ValueText.Text = tostring(Config.Default)..tostring(Config.Type)
+    return Args
+end
 
-			Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
-				Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
-			});
-
-			Config.Callback(Value);
-		end;
-
-		function Args:SetText(str : string)
-			BlockText.Text = str or Config.Name
-		end;
-
-		function Args:GetText()
-			return BlockText.Text;
-		end;
-
-		Args.Signal = Signal:Connect(function(bool)
-			if bool then
-				Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
-					Size = UDim2.new(math.max((Config.Default - Config.Min) / (Config.Max - Config.Min) , 0.045), 0, 1, 0)
-				});
-
-				Compkiller:_Animation(ValueText,Tween,{
-					TextTransparency = 0.750
-				})
-
-				Compkiller:_Animation(Frame,Tween,{
-					BackgroundTransparency = 0
-				})
-
-				Compkiller:_Animation(SliderInput,Tween,{
-					BackgroundTransparency = 0
-				})
-
-				Compkiller:_Animation(UIStroke,Tween,{
-					Transparency = 0
-				})
-
-				Compkiller:_Animation(SliderBar,Tween,{
-					BackgroundTransparency = 0
-				})
-
-				Compkiller:_Animation(BlockLine,Tween,{
-					BackgroundTransparency = 0.5
-				})
-
-				Compkiller:_Animation(BlockText,Tween,{
-					TextTransparency = 0.1
-				})
-			else
-				Compkiller:_Animation(SliderInput, TweenInfo.new(0.35),{
-					Size = UDim2.new(0, 0, 1, 0)
-				});
-
-				Compkiller:_Animation(ValueText,Tween,{
-					TextTransparency = 1
-				})
-
-				Compkiller:_Animation(Frame,Tween,{
-					BackgroundTransparency = 1
-				})
-
-				Compkiller:_Animation(SliderInput,Tween,{
-					BackgroundTransparency = 1
-				})
-
-				Compkiller:_Animation(UIStroke,Tween,{
-					Transparency = 1
-				})
-
-				Compkiller:_Animation(SliderBar,Tween,{
-					BackgroundTransparency = 1
-				})
-
-				Compkiller:_Animation(BlockLine,Tween,{
-					BackgroundTransparency = 1
-				})
-
-				Compkiller:_Animation(BlockText,Tween,{
-					TextTransparency = 1
-				})
-			end;
-		end);
-
-		function Args:GetValue()
-			return Config.Default;
-		end;
-
-		if Config.Flag then
-			Compkiller.Flags[Config.Flag] = Args;
-		end;
-
-		if not DisableStackKeybind then
-			local AutoKeybind = Compkiller:_KeybindHandler(Slider , "Number" , Args , Signal , Zindex , Config);
-
-			Args.AutoKeybind = AutoKeybind;
-		end;
-
-		return Args;
-	end;
 
 	function Args:AddParagraph(Config: Paragraph) -- request by Neptune
 		Config = Compkiller.__CONFIG(Config, {
