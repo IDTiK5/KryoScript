@@ -1,4 +1,4 @@
-lucide-pa--[[
+--[[
     		Compkiller Interface
 
     Author: 4lpaca
@@ -1999,7 +1999,6 @@ function Compkiller:_AddLinkValue(Name, Default, GlobalBlock, LinkValues, rep, S
             Toggle:Destroy()
         end
     }
-end
 
 	elseif Name == "ColorPicker" then
 		local ColorPicker = Instance.new("Frame")
