@@ -2143,200 +2143,294 @@ end
 			end
 
 			function items:Slider(side, text, start, min, max, inc, callback)
-				local dragging = false
-				--start = start or min --or 5
-				local Slider = Instance.new("Frame")
-				Slider.Name = tostring(text)
-				Slider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-				Slider.BackgroundTransparency = 1.000
-				Slider.BorderColor3 = Color3.fromRGB(27, 42, 53)
-				Slider.BorderSizePixel = 0
-				Slider.Size = UDim2.new(1, 0, 0, 36)
+    local dragging = false
+    local TweenService = game:GetService("TweenService")
+    local UserInputService = game:GetService("UserInputService")
+    
+    -- Tween Info cho animation mượt mà
+    local tweenInfoFast = TweenInfo.new(0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfoSmooth = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tweenInfoHover = TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    
+    local Slider = Instance.new("Frame")
+    Slider.Name = tostring(text)
+    Slider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Slider.BackgroundTransparency = 1.000
+    Slider.BorderColor3 = Color3.fromRGB(27, 42, 53)
+    Slider.BorderSizePixel = 0
+    Slider.Size = UDim2.new(1, 0, 0, 36)
 
-				local SliderOutline = Instance.new("UIStroke")
-				SliderOutline.Enabled = true
-				SliderOutline.Parent = Slider
-				SliderOutline.Color = Color3.fromRGB(31, 26, 61)
-				SliderOutline.LineJoinMode = Enum.LineJoinMode.Miter
-				SliderOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-				SliderOutline.Thickness = 1
-				SliderOutline.Transparency = 1
+    local SliderOutline = Instance.new("UIStroke")
+    SliderOutline.Enabled = true
+    SliderOutline.Parent = Slider
+    SliderOutline.Color = Color3.fromRGB(31, 26, 61)
+    SliderOutline.LineJoinMode = Enum.LineJoinMode.Miter
+    SliderOutline.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    SliderOutline.Thickness = 1
+    SliderOutline.Transparency = 1
 
-				local SliderTitle = Instance.new("TextLabel")
-				SliderTitle.Name = "SliderTitle"
-				SliderTitle.Parent = Slider
-				SliderTitle.AnchorPoint = Vector2.new(0, 0.5)
-				SliderTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-				SliderTitle.BackgroundTransparency = 1.000
-				SliderTitle.ClipsDescendants = true
-				SliderTitle.Position = UDim2.new(0, 21, 0.5, 0)
-				SliderTitle.Size = UDim2.new(0, 180, 1, 0)
-				SliderTitle.Font = Enum.Font.GothamMedium
-				SliderTitle.Text = text
-				SliderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-				SliderTitle.TextSize = 12.000
-				SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
+    local SliderTitle = Instance.new("TextLabel")
+    SliderTitle.Name = "SliderTitle"
+    SliderTitle.Parent = Slider
+    SliderTitle.AnchorPoint = Vector2.new(0, 0.5)
+    SliderTitle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SliderTitle.BackgroundTransparency = 1.000
+    SliderTitle.ClipsDescendants = true
+    SliderTitle.Position = UDim2.new(0, 21, 0.5, 0)
+    SliderTitle.Size = UDim2.new(0, 180, 1, 0)
+    SliderTitle.Font = Enum.Font.GothamMedium
+    SliderTitle.Text = text
+    SliderTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SliderTitle.TextSize = 12.000
+    SliderTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-				local SlideBack = Instance.new("Frame")
-				SlideBack.Name = "SlideBack"
-				SlideBack.Parent = Slider
-				SlideBack.AnchorPoint = Vector2.new(1, 0.5)
-				SlideBack.BackgroundColor3 = Color3.fromRGB(33, 28, 64)
-				SlideBack.BorderSizePixel = 0
-				SlideBack.Position = UDim2.new(1, -62, 0.5, 0)
-				SlideBack.Size = UDim2.new(0, 130, 0, 2)
+    local SlideBack = Instance.new("Frame")
+    SlideBack.Name = "SlideBack"
+    SlideBack.Parent = Slider
+    SlideBack.AnchorPoint = Vector2.new(1, 0.5)
+    SlideBack.BackgroundColor3 = Color3.fromRGB(33, 28, 64)
+    SlideBack.BorderSizePixel = 0
+    SlideBack.Position = UDim2.new(1, -62, 0.5, 0)
+    SlideBack.Size = UDim2.new(0, 130, 0, 2)
 
-				local SlideCircle = Instance.new("Frame")
-				SlideCircle.Name = "SlideCircle"
-				SlideCircle.Parent = SlideBack
-				SlideCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-				SlideCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-				SlideCircle.Position = UDim2.new(0, 0, 0.5, 0)
-				SlideCircle.Size = UDim2.new(0, 12, 0, 12)
-				SlideCircle.ZIndex = 2
+    local SlideCircle = Instance.new("Frame")
+    SlideCircle.Name = "SlideCircle"
+    SlideCircle.Parent = SlideBack
+    SlideCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+    SlideCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    SlideCircle.Position = UDim2.new(0, 0, 0.5, 0)
+    SlideCircle.Size = UDim2.new(0, 12, 0, 12)
+    SlideCircle.ZIndex = 2
 
-				local SlideCircleCorner = Instance.new("UICorner")
-				SlideCircleCorner.CornerRadius = UDim.new(1, 0)
-				SlideCircleCorner.Name = "SlideCircleCorner"
-				SlideCircleCorner.Parent = SlideCircle
+    local SlideCircleCorner = Instance.new("UICorner")
+    SlideCircleCorner.CornerRadius = UDim.new(1, 0)
+    SlideCircleCorner.Name = "SlideCircleCorner"
+    SlideCircleCorner.Parent = SlideCircle
 
-				local SlideBackLight = Instance.new("Frame")
-				SlideBackLight.Name = "SlideBackLight"
-				SlideBackLight.Parent = SlideBack
-				SlideBackLight.AnchorPoint = Vector2.new(0, 0.5)
-				SlideBackLight.BackgroundColor3 = Color3.fromRGB(107, 89, 222)
-				SlideBackLight.BorderSizePixel = 0
-				SlideBackLight.Position = UDim2.new(0, 0, 0.5, 0)
-				SlideBackLight.Size = UDim2.new(0, 0, 0, 2)
+    local SlideBackLight = Instance.new("Frame")
+    SlideBackLight.Name = "SlideBackLight"
+    SlideBackLight.Parent = SlideBack
+    SlideBackLight.AnchorPoint = Vector2.new(0, 0.5)
+    SlideBackLight.BackgroundColor3 = Color3.fromRGB(107, 89, 222)
+    SlideBackLight.BorderSizePixel = 0
+    SlideBackLight.Position = UDim2.new(0, 0, 0.5, 0)
+    SlideBackLight.Size = UDim2.new(0, 0, 0, 2)
 
-				local SlideBackLightCorner = Instance.new("UICorner")
-				SlideBackLightCorner.CornerRadius = UDim.new(1, 0)
-				SlideBackLightCorner.Name = "SlideBackLightCorner"
-				SlideBackLightCorner.Parent = SlideBackLight
+    local SlideBackLightCorner = Instance.new("UICorner")
+    SlideBackLightCorner.CornerRadius = UDim.new(1, 0)
+    SlideBackLightCorner.Name = "SlideBackLightCorner"
+    SlideBackLightCorner.Parent = SlideBackLight
 
-				local SliderValue = Instance.new("TextBox")
-				SliderValue.Name = "SliderValue"
-				SliderValue.Parent = Slider
-				SliderValue.BackgroundColor3 = Color3.fromRGB(61, 34, 134)
-				SliderValue.BackgroundTransparency = 0.810
-				SliderValue.Position = UDim2.new(0.797999978, 21, 0.222000003, 0)
-				SliderValue.Size = UDim2.new(0, 27, 0, 16)
-				SliderValue.Font = Enum.Font.Gotham
-				SliderValue.Text = min
-				SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
-				SliderValue.TextSize = 12
-				SliderValue.TextXAlignment = Enum.TextXAlignment.Center
-				SliderValue.TextWrapped = true
+    local SliderValue = Instance.new("TextBox")
+    SliderValue.Name = "SliderValue"
+    SliderValue.Parent = Slider
+    SliderValue.BackgroundColor3 = Color3.fromRGB(61, 34, 134)
+    SliderValue.BackgroundTransparency = 0.810
+    SliderValue.Position = UDim2.new(0.797999978, 21, 0.222000003, 0)
+    SliderValue.Size = UDim2.new(0, 27, 0, 16)
+    SliderValue.Font = Enum.Font.Gotham
+    SliderValue.Text = min
+    SliderValue.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SliderValue.TextSize = 12
+    SliderValue.TextXAlignment = Enum.TextXAlignment.Center
+    SliderValue.TextWrapped = true
 
-				local SliderValCorner = Instance.new("UICorner")
-				SliderValCorner.CornerRadius = UDim.new(0, 3)
-				SliderValCorner.Parent = SliderValue
+    local SliderValCorner = Instance.new("UICorner")
+    SliderValCorner.CornerRadius = UDim.new(0, 3)
+    SliderValCorner.Parent = SliderValue
 
-				local SliderValStroke = Instance.new("UIStroke")
-				SliderValStroke.Enabled = true
-				SliderValStroke.Parent = SliderValue
-				SliderValStroke.Color = Color3.fromRGB(54, 39, 107)
-				SliderValStroke.LineJoinMode = Enum.LineJoinMode.Round
-				SliderValStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-				SliderValStroke.Thickness = 1
-				SliderValStroke.Transparency = 0.4 
+    local SliderValStroke = Instance.new("UIStroke")
+    SliderValStroke.Enabled = true
+    SliderValStroke.Parent = SliderValue
+    SliderValStroke.Color = Color3.fromRGB(54, 39, 107)
+    SliderValStroke.LineJoinMode = Enum.LineJoinMode.Round
+    SliderValStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    SliderValStroke.Thickness = 1
+    SliderValStroke.Transparency = 0.4 
 
-				if side == 'Left' then
-					Slider.Parent = Left
-				elseif side == 'Right' then
-					Slider.Parent = Right
-				else
-					Slider:Destroy()
-					print('please select a side for the ' .. text .. ' slider')
-				end
+    if side == 'Left' then
+        Slider.Parent = Left
+    elseif side == 'Right' then
+        Slider.Parent = Right
+    else
+        Slider:Destroy()
+        print('please select a side for the ' .. text .. ' slider')
+        return
+    end
 
-				local function move(Input) 
-					local XSize = math.clamp((Input.Position.X - SlideBack.AbsolutePosition.X) / SlideBack.AbsoluteSize.X, 0, 1)
-					local Increment = inc and (max / ((max - min) / (inc * 4))) or (max >= 50 and max / ((max - min) / 4)) or (max >= 25 and max / ((max - min) / 2)) or (max / (max - min))
-					local SizeRounded = UDim2.new((math.round(XSize * ((max / Increment) * 4)) / ((max / Increment) * 4)), 0, 0, 2)
-					local PosRoundedCircle = UDim2.new((math.round(XSize * ((max / Increment) * 4)) / ((max / Increment) * 4)), 0, 0.5, 0)
-					SlideBackLight:TweenSize(SizeRounded, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
-					SlideCircle:TweenPosition(PosRoundedCircle, Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true)
-					local Val = math.round((((SizeRounded.X.Scale * max) / max) * (max - min) + min) * 20) / 20
-					SliderValue.Text = tostring(Val)
-					pcall(callback, tonumber(Val))
-				end
-				local cfg = {Value = start}
-				function SetStart(val)
-					local a = math.floor(tostring(val and (val / max) * (max - min) + min) or 0)
-					SlideCircle.Position = UDim2.new((val or 0) / max, 0, 1, 0) 
-					--[[ with animation:SlideBackLight:TweenSize(UDim2.new((val or 0) / max, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 3, true) / SlideCircle:TweenPosition(UDim2.new((val or 0) / max, 0, 1, 0), Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 3, true)]]
-					SlideBackLight.Size = UDim2.new((val or 0) / max, 0, 1, 0)
-					SliderValue.Text = tostring(cfg.Value)
-					cfg.Value = val
-					return pcall(callback, tonumber(cfg.Value))
-				end
-				SetStart(start)
+    -- Function để phóng to circle khi dragging
+    local function expandCircle()
+        TweenService:Create(SlideCircle, tweenInfoHover, {
+            Size = UDim2.new(0, 16, 0, 16),
+            BackgroundColor3 = Color3.fromRGB(107, 89, 222)
+        }):Play()
+    end
+    
+    -- Function để thu nhỏ circle khi không dragging
+    local function shrinkCircle()
+        TweenService:Create(SlideCircle, tweenInfoHover, {
+            Size = UDim2.new(0, 12, 0, 12),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        }):Play()
+    end
 
-				SlideCircle.InputBegan:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = true
-						move(input)
-					end
-				end)
-				SlideCircle.InputEnded:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = false
-						move(input)
-					end
-				end)
-				SlideBack.InputBegan:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = true
-						move(input)
-					end
-				end)
-				SlideBack.InputEnded:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = false
-						move(input)
-					end
-				end)
-				SlideBackLight.InputBegan:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = true
-						move(input)
-					end
-				end)
-				SlideBackLight.InputEnded:Connect(function(input)
-					if input.UserInputType == Enum.UserInputType.MouseButton1 then
-						dragging = false
-						move(input)
-					end
-				end)
-				game:GetService("UserInputService").InputChanged:Connect(function(input)
-					if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-						move(input)
-					end
-				end)
-				SliderValue.FocusLost:Connect(function(ep)
-					if ep then
-						if (tonumber(SliderValue.Text) > max) then SliderValue.Text = tostring(max) pcall(callback, tostring(SliderValue.Text))TweenService:Create(SlideBackLight,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Size = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play()
-						else pcall(callback, tostring(SliderValue.Text))
-							TweenService:Create(SlideBackLight,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Size = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play() end
-						if (tonumber(SliderValue.Text) < min) then SliderValue.Text = tostring(min) pcall(callback, tostring(SliderValue.Text))
-							TweenService:Create(SlideBackLight,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Size = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play()
-						else pcall(callback, tostring(SliderValue.Text)) TweenService:Create(SlideBackLight,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Size = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play() end
-						if (tonumber(SliderValue.Text) <= min) then pcall(callback, tostring(SliderValue.Text))
-							TweenService:Create(SlideBackLight,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Size = UDim2.new(0, 0, 0, 3)}):Play()
-						end
-						--circle slide
-						if (tonumber(SliderValue.Text) > max)  then
-							SliderValue.Text = tostring(max)
-							TweenService:Create(SlideCircle,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Position = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play()
-						else TweenService:Create(SlideCircle,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Position = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play() end
-						if (tonumber(SliderValue.Text) < min) then SliderValue.Text = tostring(min)
-							TweenService:Create(SlideCircle,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Position = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play()
-						else TweenService:Create(SlideCircle,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Position = UDim2.new((tonumber(SliderValue.Text)) / max, 0, 0, 2)}):Play() end
-						if (tonumber(SliderValue.Text) <= min) then TweenService:Create(SlideCircle,TweenInfo.new(.3, Enum.EasingStyle.Quad),{Position = UDim2.new(0, 0, 0, 3)}):Play() end
-					end
-				end)
-			end
+    -- Function move với animation mượt mà
+    local function move(inputPosition) 
+        local XSize = math.clamp((inputPosition.X - SlideBack.AbsolutePosition.X) / SlideBack.AbsoluteSize.X, 0, 1)
+        local Increment = inc and (max / ((max - min) / (inc * 4))) or (max >= 50 and max / ((max - min) / 4)) or (max >= 25 and max / ((max - min) / 2)) or (max / (max - min))
+        local roundedScale = math.round(XSize * ((max / Increment) * 4)) / ((max / Increment) * 4)
+        
+        -- Tween mượt mà thay vì TweenSize/TweenPosition cũ
+        TweenService:Create(SlideBackLight, tweenInfoFast, {
+            Size = UDim2.new(roundedScale, 0, 0, 2)
+        }):Play()
+        
+        TweenService:Create(SlideCircle, tweenInfoFast, {
+            Position = UDim2.new(roundedScale, 0, 0.5, 0)
+        }):Play()
+        
+        local Val = math.round(((roundedScale * (max - min) + min)) * 20) / 20
+        SliderValue.Text = tostring(Val)
+        pcall(callback, tonumber(Val))
+    end
+    
+    local cfg = {Value = start}
+    
+    local function SetStart(val)
+        local scale = (val - min) / (max - min)
+        scale = math.clamp(scale, 0, 1)
+        
+        SlideCircle.Position = UDim2.new(scale, 0, 0.5, 0)
+        SlideBackLight.Size = UDim2.new(scale, 0, 0, 2)
+        SliderValue.Text = tostring(val)
+        cfg.Value = val
+        return pcall(callback, tonumber(cfg.Value))
+    end
+    SetStart(start)
+
+    -- Function để check cả Mouse và Touch input
+    local function isValidInput(input)
+        return input.UserInputType == Enum.UserInputType.MouseButton1 
+            or input.UserInputType == Enum.UserInputType.Touch
+    end
+    
+    local function isValidMovement(input)
+        return input.UserInputType == Enum.UserInputType.MouseMovement 
+            or input.UserInputType == Enum.UserInputType.Touch
+    end
+
+    -- Xử lý input cho SlideCircle
+    SlideCircle.InputBegan:Connect(function(input)
+        if isValidInput(input) then
+            dragging = true
+            expandCircle()
+            move(input.Position)
+        end
+    end)
+    
+    SlideCircle.InputEnded:Connect(function(input)
+        if isValidInput(input) then
+            dragging = false
+            shrinkCircle()
+        end
+    end)
+    
+    -- Xử lý input cho SlideBack
+    SlideBack.InputBegan:Connect(function(input)
+        if isValidInput(input) then
+            dragging = true
+            expandCircle()
+            move(input.Position)
+        end
+    end)
+    
+    SlideBack.InputEnded:Connect(function(input)
+        if isValidInput(input) then
+            dragging = false
+            shrinkCircle()
+        end
+    end)
+    
+    -- Xử lý input cho SlideBackLight
+    SlideBackLight.InputBegan:Connect(function(input)
+        if isValidInput(input) then
+            dragging = true
+            expandCircle()
+            move(input.Position)
+        end
+    end)
+    
+    SlideBackLight.InputEnded:Connect(function(input)
+        if isValidInput(input) then
+            dragging = false
+            shrinkCircle()
+        end
+    end)
+    
+    -- Xử lý di chuyển chuột/touch
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and isValidMovement(input) then
+            move(input.Position)
+        end
+    end)
+    
+    -- Xử lý khi touch kết thúc (quan trọng cho mobile)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            shrinkCircle()
+        end
+    end)
+
+    -- Xử lý FocusLost cho TextBox (đã refactor)
+    SliderValue.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local inputVal = tonumber(SliderValue.Text)
+            
+            if not inputVal then
+                SliderValue.Text = tostring(cfg.Value)
+                return
+            end
+            
+            -- Clamp giá trị trong khoảng min-max
+            inputVal = math.clamp(inputVal, min, max)
+            SliderValue.Text = tostring(inputVal)
+            cfg.Value = inputVal
+            
+            -- Tính scale position
+            local scale = (inputVal - min) / (max - min)
+            
+            -- Animate SlideBackLight và SlideCircle
+            TweenService:Create(SlideBackLight, tweenInfoSmooth, {
+                Size = UDim2.new(scale, 0, 0, 2)
+            }):Play()
+            
+            TweenService:Create(SlideCircle, tweenInfoSmooth, {
+                Position = UDim2.new(scale, 0, 0.5, 0)
+            }):Play()
+            
+            pcall(callback, inputVal)
+        end
+    end)
+    
+    -- Hover effect cho PC
+    SlideCircle.MouseEnter:Connect(function()
+        if not dragging then
+            TweenService:Create(SlideCircle, tweenInfoHover, {
+                Size = UDim2.new(0, 14, 0, 14)
+            }):Play()
+        end
+    end)
+    
+    SlideCircle.MouseLeave:Connect(function()
+        if not dragging then
+            TweenService:Create(SlideCircle, tweenInfoHover, {
+                Size = UDim2.new(0, 12, 0, 12)
+            }):Play()
+        end
+    end)
+end
+
 
 			function items:Dropdown(side, text, default, options, cb, multi)
 				local opened = false
