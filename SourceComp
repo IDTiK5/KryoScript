@@ -1851,155 +1851,137 @@ function Compkiller:_IsMobile()
 	return UserInputService.TouchEnabled;
 end;
 
--- Cache các hàm thường dùng
-local Instance_new = Instance.new
-local table_insert = table.insert
-local UDim2_new = UDim2.new
-local UDim_new = UDim.new
-local Vector2_new = Vector2.new
-local Color3_fromRGB = Color3.fromRGB
+function Compkiller:_AddLinkValue(Name , Default , GlobalBlock , LinkValues , rep , Signal)
+	if Name == "Toggle" then
+		local Toggle = Instance.new("Frame")
+		local UICorner = Instance.new("UICorner")
+		local UIStroke = Instance.new("UIStroke")
+		local ToggleValue = Instance.new("Frame")
+		local UICorner_2 = Instance.new("UICorner")
 
--- Template để clone thay vì tạo mới
-local ToggleTemplate = nil
+		Toggle.Name = Compkiller:_RandomString()
+		Toggle.Parent = LinkValues
+		Toggle.BackgroundColor3 = Compkiller.Colors.DropColor
+		Toggle.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		Toggle.BorderSizePixel = 0
+		Toggle.Size = UDim2.new(0, 30, 0, 16)
+		Toggle.ZIndex = GlobalBlock.ZIndex + 1
+		Toggle.LayoutOrder = -#LinkValues:GetChildren();
 
-local function CreateToggleTemplate(Compkiller)
-    if ToggleTemplate then return ToggleTemplate:Clone() end
-    
-    local Toggle = Instance_new("Frame")
-    local UICorner = Instance_new("UICorner")
-    local UIStroke = Instance_new("UIStroke")
-    local ToggleValue = Instance_new("Frame")
-    local UICorner_2 = Instance_new("UICorner")
+		table.insert(Compkiller.Elements.DropColor , {
+			Element = Toggle,
+			Property = "BackgroundColor3"
+		})
 
-    Toggle.Name = "ToggleTemplate"
-    Toggle.BackgroundColor3 = Compkiller.Colors.DropColor
-    Toggle.BorderSizePixel = 0
-    Toggle.Size = UDim2_new(0, 30, 0, 16)
+		UICorner.CornerRadius = UDim.new(1, 0)
+		UICorner.Parent = Toggle
 
-    UICorner.CornerRadius = UDim_new(1, 0)
-    UICorner.Parent = Toggle
+		UIStroke.Color = Compkiller.Colors.HighStrokeColor
+		UIStroke.Parent = Toggle
 
-    UIStroke.Color = Compkiller.Colors.HighStrokeColor
-    UIStroke.Name = "Stroke"
-    UIStroke.Parent = Toggle
+		table.insert(Compkiller.Elements.HighStrokeColor,{
+			Element = UIStroke,
+			Property = "Color"
+		})
 
-    ToggleValue.Name = "Value"
-    ToggleValue.AnchorPoint = Vector2_new(0.5, 0.5)
-    ToggleValue.BackgroundColor3 = Compkiller.Colors.SwitchColor
-    ToggleValue.BorderSizePixel = 0
-    ToggleValue.Position = UDim2_new(0.25, 0, 0.5, 0)
-    ToggleValue.Size = UDim2_new(0.55, 0, 0.55, 0)
-    ToggleValue.SizeConstraint = Enum.SizeConstraint.RelativeYY
-    ToggleValue.Parent = Toggle
+		ToggleValue.Name = Compkiller:_RandomString()
+		ToggleValue.Parent = Toggle
+		ToggleValue.AnchorPoint = Vector2.new(0.5, 0.5)
+		ToggleValue.BackgroundColor3 = Compkiller.Colors.SwitchColor
+		ToggleValue.BorderColor3 = Color3.fromRGB(0, 0, 0)
+		ToggleValue.BorderSizePixel = 0
+		ToggleValue.Position = UDim2.new(0.25, 0, 0.5, 0)
+		ToggleValue.Size = UDim2.new(0.550000012, 0, 0.550000012, 0)
+		ToggleValue.SizeConstraint = Enum.SizeConstraint.RelativeYY
+		ToggleValue.ZIndex = GlobalBlock.ZIndex + 2
 
-    UICorner_2.CornerRadius = UDim_new(1, 0)
-    UICorner_2.Parent = ToggleValue
-    
-    ToggleTemplate = Toggle
-    return Toggle:Clone()
-end
+		UICorner_2.CornerRadius = UDim.new(1, 0)
+		UICorner_2.Parent = ToggleValue;
 
--- Positions và sizes được cache
-local POS_ON = UDim2_new(0.75, 0, 0.5, 0)
-local POS_OFF = UDim2_new(0.25, 0, 0.5, 0)
-local SIZE_HOVER = UDim2_new(0.6, 0, 0.6, 0)
-local SIZE_NORMAL = UDim2_new(0.55, 0, 0.55, 0)
+		local ToggleElement = function(bool,noChange)
+			if not noChange then
+				Default = bool;
+			end;
 
-function Compkiller:_AddLinkValue(Name, Default, GlobalBlock, LinkValues, rep, Signal)
-    if Name ~= "Toggle" then return end
-    
-    -- Clone template thay vì tạo mới
-    local Toggle = CreateToggleTemplate(self)
-    local ToggleValue = Toggle.Value
-    local UIStroke = Toggle.Stroke
-    
-    Toggle.Name = self:_RandomString()
-    Toggle.Parent = LinkValues
-    Toggle.ZIndex = GlobalBlock.ZIndex + 1
-    Toggle.LayoutOrder = -#LinkValues:GetChildren()
-    ToggleValue.ZIndex = GlobalBlock.ZIndex + 2
+			if bool then
+				Toggle:SetAttribute('Enabled',true);
 
-    -- Batch insert để giảm overhead
-    local elements = self.Elements
-    elements.DropColor[#elements.DropColor + 1] = {
-        Element = Toggle,
-        Property = "BackgroundColor3"
-    }
-    elements.HighStrokeColor[#elements.HighStrokeColor + 1] = {
-        Element = UIStroke,
-        Property = "Color"
-    }
+				Compkiller:_Animation(ToggleValue,rep.Tween,{
+					Position = UDim2.new(0.75, 0, 0.5, 0)
+				})
 
-    -- Cache colors
-    local Colors = self.Colors
-    local ToggleColor = Colors.Toggle
-    local DropColor = Colors.DropColor
-    local TweenInfo = rep.Tween
+				Compkiller:_Animation(Toggle,rep.Tween,{
+					BackgroundColor3 = Compkiller.Colors.Toggle
+				})
+			else
+				Toggle:SetAttribute('Enabled',false);
 
-    -- Tối ưu animation function
-    local _Animation = self._Animation
-    
-    local function ToggleElement(bool, noChange)
-        if not noChange then
-            Default = bool
-        end
+				Compkiller:_Animation(ToggleValue,rep.Tween,{
+					Position = UDim2.new(0.25, 0, 0.5, 0)
+				})
 
-        Toggle:SetAttribute('Enabled', bool)
-        
-        local targetPos = bool and POS_ON or POS_OFF
-        local targetColor = bool and ToggleColor or DropColor
-        
-        _Animation(self, ToggleValue, TweenInfo, {Position = targetPos})
-        _Animation(self, Toggle, TweenInfo, {BackgroundColor3 = targetColor})
-    end
+				Compkiller:_Animation(Toggle,rep.Tween,{
+					BackgroundColor3 = Compkiller.Colors.DropColor
+				})
+			end;
+		end;
 
-    local Input = self:_Input(Toggle)
-    
-    -- Tối ưu hover - chỉ animate khi cần
-    local isHovering = false
-    self:_Hover(Input, function()
-        if not Default and not isHovering then
-            isHovering = true
-            _Animation(self, ToggleValue, TweenInfo, {Size = SIZE_HOVER})
-        end
-    end, function()
-        if isHovering then
-            isHovering = false
-            _Animation(self, ToggleValue, TweenInfo, {Size = SIZE_NORMAL})
-        end
-    end)
+		local Input = Compkiller:_Input(Toggle);
 
-    local function ToggleUI(bool)
-        local transparency = bool and 0 or 1
-        
-        if bool then
-            ToggleElement(Default, true)
-        else
-            ToggleElement(false, true)
-        end
-        
-        -- Batch animations
-        _Animation(self, ToggleValue, TweenInfo, {BackgroundTransparency = transparency})
-        _Animation(self, Toggle, TweenInfo, {BackgroundTransparency = transparency})
-        _Animation(self, UIStroke, TweenInfo, {Transparency = transparency})
-    end
+		Compkiller:_Hover(Input , function()
+			if not Default then
+				Compkiller:_Animation(ToggleValue,rep.Tween,{
+					Size = UDim2.new(0.6, 0, 0.6, 0)
+				})
+			end;
+		end , function()
+			Compkiller:_Animation(ToggleValue,rep.Tween,{
+				Size = UDim2.new(0.550000012, 0, 0.550000012, 0)
+			})
+		end);
 
-    ToggleElement(Default)
-    
-    -- Lưu connection để cleanup sau
-    local connection = Signal:Connect(ToggleUI)
+		local ToggleUI = function(bool)
+			if bool then
+				ToggleElement(Default,true);
 
-    return {
-        Root = Toggle,
-        ChangeValue = ToggleElement,
-        Input = Input,
-        ToggleUI = ToggleUI,
-        Destroy = function()
-            connection:Disconnect()
-            Toggle:Destroy()
-        end
-    }
+				Compkiller:_Animation(ToggleValue,rep.Tween,{
+					BackgroundTransparency = 0
+				})
 
+				Compkiller:_Animation(Toggle,rep.Tween,{
+					BackgroundTransparency = 0
+				})
+
+				Compkiller:_Animation(UIStroke,rep.Tween,{
+					Transparency = 0
+				})
+			else
+				ToggleElement(false,true);
+
+				Compkiller:_Animation(ToggleValue,rep.Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(Toggle,rep.Tween,{
+					BackgroundTransparency = 1
+				})
+
+				Compkiller:_Animation(UIStroke,rep.Tween,{
+					Transparency = 1
+				})
+			end;
+		end;
+
+		ToggleElement(Default);
+
+		Signal:Connect(ToggleUI)
+
+		return {
+			Root = Toggle,
+			ChangeValue = ToggleElement,
+			Input = Input,
+			ToggleUI = ToggleUI,
+		};
 	elseif Name == "ColorPicker" then
 		local ColorPicker = Instance.new("Frame")
 		local ColorFrame = Instance.new("Frame")
