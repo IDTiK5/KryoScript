@@ -1,0 +1,1956 @@
+-- // VICE HUB UI LIBRARY - ENHANCED 2025 VERSION
+-- // Full Mobile Support + Modern Features
+
+local Global = getgenv and getgenv() or _G
+
+-- Services
+local UserInputService = game:GetService('UserInputService')
+local TweenService = game:GetService('TweenService')
+local CoreGui = game:GetService('CoreGui')
+local RunService = game:GetService('RunService')
+local LocalPlayer = game:GetService('Players').LocalPlayer
+local Stats = game:GetService("Stats")
+
+-- Wait for game to load
+if not game:IsLoaded() then 
+    game.Loaded:Wait() 
+end
+
+-- Cleanup old instances
+local function Cleanup()
+    for _, name in ipairs({"Vice", "NotifsGui", "WatermarkUI"}) do
+        local found = CoreGui:FindFirstChild(name)
+        if found then found:Destroy() end
+    end
+end
+Cleanup()
+
+-- Library Core
+local LibraryFunctions = {
+    Notifications = {},
+    Connections = {},
+    Flags = {},
+    
+    -- Mobile detection
+    IsMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled,
+    HasTouch = UserInputService.TouchEnabled,
+    HasMouse = UserInputService.MouseEnabled,
+    HasKeyboard = UserInputService.KeyboardEnabled,
+    
+    -- Viewport info
+    ViewportSize = workspace.CurrentCamera.ViewportSize,
+    
+    -- Theme colors
+    Theme = {
+        Primary = Color3.fromRGB(107, 89, 222),
+        Secondary = Color3.fromRGB(72, 0, 255),
+        Background = Color3.fromRGB(23, 20, 41),
+        BackgroundDark = Color3.fromRGB(13, 10, 28),
+        BackgroundLight = Color3.fromRGB(35, 35, 55),
+        Border = Color3.fromRGB(31, 26, 61),
+        Text = Color3.fromRGB(255, 255, 255),
+        TextDark = Color3.fromRGB(188, 188, 188),
+        Success = Color3.fromRGB(46, 204, 113),
+        Warning = Color3.fromRGB(241, 196, 15),
+        Error = Color3.fromRGB(231, 76, 60)
+    },
+    
+    -- Animation settings
+    Animations = {
+        AnimSpeed = 0.2,
+        ElementsAS = 0.2,
+        EasingStyle = Enum.EasingStyle.Quart,
+        EasingDirection = Enum.EasingDirection.Out
+    }
+}
+
+-- ============================================
+-- CORE UTILITY FUNCTIONS
+-- ============================================
+
+function LibraryFunctions:Create(Class, Properties)
+    local Object = Instance.new(Class)
+    for Property, Value in pairs(Properties) do
+        Object[Property] = Value
+    end
+    return Object
+end
+
+function LibraryFunctions:Connect(Signal, Function)
+    local Connection = Signal:Connect(Function)
+    table.insert(self.Connections, Connection)
+    return Connection
+end
+
+function LibraryFunctions:Tween(Object, Properties, Time, EasingStyle, EasingDirection)
+    local tweenInfo = TweenInfo.new(
+        Time or self.Animations.AnimSpeed,
+        EasingStyle or self.Animations.EasingStyle,
+        EasingDirection or self.Animations.EasingDirection
+    )
+    TweenService:Create(Object, tweenInfo, Properties):Play()
+end
+
+function LibraryFunctions:Round(Number, Increment)
+    local Bracket = 1 / Increment
+    return math.round(Number * Bracket) / Bracket
+end
+
+-- ============================================
+-- RESPONSIVE DESIGN SYSTEM
+-- ============================================
+
+function LibraryFunctions:GetResponsiveSize()
+    local viewport = self.ViewportSize
+    local isPortrait = viewport.Y > viewport.X
+    
+    if self.IsMobile then
+        if isPortrait then
+            return {
+                MainSize = UDim2.new(0.95, 0, 0.85, 0),
+                TabSize = UDim2.new(1, 0, 0, 50),
+                ButtonHeight = 50,
+                SliderHeight = 60,
+                ToggleHeight = 55,
+                DropdownHeight = 50,
+                TextSize = 16,
+                TitleSize = 18,
+                MinTouchSize = 44,
+                Padding = 8,
+                WatermarkSize = UDim2.new(0, math.min(viewport.X * 0.9, 400), 0, 40)
+            }
+        else
+            return {
+                MainSize = UDim2.new(0.85, 0, 0.9, 0),
+                TabSize = UDim2.new(0, 120, 1, 0),
+                ButtonHeight = 45,
+                SliderHeight = 55,
+                ToggleHeight = 50,
+                DropdownHeight = 45,
+                TextSize = 14,
+                TitleSize = 16,
+                MinTouchSize = 44,
+                Padding = 8,
+                WatermarkSize = UDim2.new(0, math.min(viewport.X * 0.6, 455), 0, 35)
+            }
+        end
+    else
+        return {
+            MainSize = UDim2.new(0, 700, 0, 625),
+            TabSize = UDim2.new(0, 150, 1, 0),
+            ButtonHeight = 35,
+            SliderHeight = 40,
+            ToggleHeight = 35,
+            DropdownHeight = 35,
+            TextSize = 14,
+            TitleSize = 16,
+            MinTouchSize = 20,
+            Padding = 5,
+            WatermarkSize = UDim2.new(0, 455, 0, 33)
+        }
+    end
+end
+
+-- Update viewport on screen rotation
+workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+    LibraryFunctions.ViewportSize = workspace.CurrentCamera.ViewportSize
+end)
+
+-- ============================================
+-- MOBILE INPUT HANDLER
+-- ============================================
+
+function LibraryFunctions:HandleMobileInput(element, callbacks)
+    local touchStartPos = nil
+    local touchStartTime = 0
+    local isHolding = false
+    local holdThreshold = 0.5
+    local dragThreshold = 10
+    local isDragging = false
+    
+    -- InputBegan - Touch/Click start
+    element.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or 
+           input.UserInputType == Enum.UserInputType.MouseButton1 then
+            
+            touchStartPos = input.Position
+            touchStartTime = tick()
+            isHolding = false
+            isDragging = false
+            
+            -- Visual feedback
+            self:Tween(element, {
+                BackgroundColor3 = element.BackgroundColor3:Lerp(Color3.new(1, 1, 1), 0.1)
+            }, 0.1)
+            
+            -- Start callback
+            if callbacks.OnStart then
+                callbacks.OnStart(input)
+            end
+            
+            -- Hold detection
+            if callbacks.OnHold then
+                task.spawn(function()
+                    wait(holdThreshold)
+                    if touchStartPos and (tick() - touchStartTime) >= holdThreshold and not isDragging then
+                        isHolding = true
+                        callbacks.OnHold(input)
+                    end
+                end)
+            end
+        end
+    end)
+    
+    -- InputChanged - Touch/Drag movement
+    element.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.Touch or 
+            input.UserInputType == Enum.UserInputType.MouseMovement) and touchStartPos then
+            
+            local distance = (input.Position - touchStartPos).Magnitude
+            
+            if distance > dragThreshold and not isHolding then
+                isDragging = true
+                if callbacks.OnDrag then
+                    callbacks.OnDrag(input, input.Position - touchStartPos)
+                end
+            end
+        end
+    end)
+    
+    -- InputEnded - Touch/Click release
+    element.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or 
+           input.UserInputType == Enum.UserInputType.MouseButton1 then
+            
+            -- Reset visual feedback
+            self:Tween(element, {
+                BackgroundColor3 = element.BackgroundColor3
+            }, 0.1)
+            
+            if touchStartPos then
+                local distance = (input.Position - touchStartPos).Magnitude
+                local duration = tick() - touchStartTime
+                
+                -- Tap/Click
+                if distance < dragThreshold and duration < holdThreshold and not isHolding then
+                    if callbacks.OnClick then
+                        callbacks.OnClick(input)
+                    end
+                end
+                
+                -- Drag end
+                if isDragging and callbacks.OnDragEnd then
+                    callbacks.OnDragEnd(input)
+                end
+                
+                -- End callback
+                if callbacks.OnEnd then
+                    callbacks.OnEnd(input)
+                end
+            end
+            
+            -- Reset states
+            touchStartPos = nil
+            touchStartTime = 0
+            isHolding = false
+            isDragging = false
+        end
+    end)
+end
+
+-- ============================================
+-- ENHANCED DRAGGING SYSTEM
+-- ============================================
+
+function LibraryFunctions:MakeDraggable(dragHandle, dragObject)
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
+    
+    local function updateDrag(input)
+        if not dragging then return end
+        
+        local delta = input.Position - dragStart
+        local newPos = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+        
+        self:Tween(dragObject, {Position = newPos}, 0.1)
+    end
+    
+    self:HandleMobileInput(dragHandle, {
+        OnStart = function(input)
+            dragging = true
+            dragStart = input.Position
+            startPos = dragObject.Position
+            
+            -- Visual feedback for mobile
+            if self.IsMobile then
+                self:Tween(dragHandle, {BackgroundTransparency = 0.2}, 0.1)
+            end
+        end,
+        
+        OnDrag = function(input)
+            updateDrag(input)
+        end,
+        
+        OnEnd = function()
+            dragging = false
+            
+            if self.IsMobile then
+                self:Tween(dragHandle, {BackgroundTransparency = dragHandle.BackgroundTransparency}, 0.1)
+            end
+        end
+    })
+end
+
+-- ============================================
+-- UI ELEMENT CREATORS
+-- ============================================
+
+function LibraryFunctions:CreateCorner(parent, radius)
+    local corner = self:Create("UICorner", {
+        CornerRadius = UDim.new(0, radius or 8),
+        Parent = parent
+    })
+    return corner
+end
+
+function LibraryFunctions:CreateStroke(parent, color, thickness, transparency)
+    local stroke = self:Create("UIStroke", {
+        Color = color or self.Theme.Border,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Parent = parent
+    })
+    return stroke
+end
+
+function LibraryFunctions:CreateGlow(parent, color, intensity)
+    local glow = self:Create("ImageLabel", {
+        Name = "Glow",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, -20, 0, -20),
+        Size = UDim2.new(1, 40, 1, 40),
+        ZIndex = 0,
+        Image = "rbxassetid://5028857084",
+        ImageColor3 = color or self.Theme.Primary,
+        ImageTransparency = intensity or 0.3,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(24, 24, 276, 276),
+        Parent = parent
+    })
+    return glow
+end
+
+function LibraryFunctions:CreatePadding(parent, padding)
+    local pad = padding or self:GetResponsiveSize().Padding
+    return self:Create("UIPadding", {
+        PaddingTop = UDim.new(0, pad),
+        PaddingBottom = UDim.new(0, pad),
+        PaddingLeft = UDim.new(0, pad),
+        PaddingRight = UDim.new(0, pad),
+        Parent = parent
+    })
+end
+
+-- Export library
+return LibraryFunctions
+
+-- ============================================
+-- WATERMARK SYSTEM - ENHANCED
+-- ============================================
+
+function LibraryFunctions:CreateWatermark(title)
+    local responsiveSize = self:GetResponsiveSize()
+    title = title or "VICE HUB"
+    
+    local MainFrame = self:Create("ScreenGui", {
+        Name = "WatermarkUI",
+        Parent = CoreGui,
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    })
+    
+    local watermarkFrame = self:Create("Frame", {
+        Name = "WatermarkFrame",
+        Parent = MainFrame,
+        Active = true,
+        BackgroundColor3 = self.Theme.BackgroundDark,
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        Size = responsiveSize.WatermarkSize,
+        Position = self.IsMobile and UDim2.new(0.5, 0, 0, 10) or UDim2.new(1, -20, 0, 20),
+        AnchorPoint = self.IsMobile and Vector2.new(0.5, 0) or Vector2.new(1, 0)
+    })
+    
+    self:CreateCorner(watermarkFrame, 12)
+    self:CreateGlow(watermarkFrame, self.Theme.Primary, 0.3)
+    
+    -- Content container
+    local contentFrame = self:Create("Frame", {
+        Name = "ContentFrame",
+        Parent = watermarkFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0)
+    })
+    
+    local layout = self:Create("UIListLayout", {
+        Parent = contentFrame,
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, self.IsMobile and 8 or 12)
+    })
+    
+    -- Logo
+    local logo = self:Create("ImageLabel", {
+        Name = "Logo",
+        Parent = contentFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, self.IsMobile and 20 or 18, 0, self.IsMobile and 20 or 18),
+        Image = "rbxassetid://10272150497"
+    })
+    
+    -- Title
+    local titleLabel = self:Create("TextLabel", {
+        Name = "Title",
+        Parent = contentFrame,
+        BackgroundTransparency = 1,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.new(0, 0, 0, 25),
+        Font = Enum.Font.GothamBold,
+        Text = title,
+        TextColor3 = self.Theme.Text,
+        TextSize = self.IsMobile and 14 or 12,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    -- Info container
+    local infoContainer = self:Create("Frame", {
+        Name = "InfoContainer",
+        Parent = contentFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, self.IsMobile and 160 : 180, 0, 25)
+    })
+    
+    local infoLayout = self:Create("UIListLayout", {
+        Parent = infoContainer,
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, self.IsMobile and 6 or 8)
+    })
+    
+    -- Create info labels
+    local function createInfoLabel(text)
+        return self:Create("TextLabel", {
+            Parent = infoContainer,
+            BackgroundTransparency = 1,
+            AutomaticSize = Enum.AutomaticSize.X,
+            Size = UDim2.new(0, 0, 0, 25),
+            Font = Enum.Font.Gotham,
+            Text = text,
+            TextColor3 = self.Theme.TextDark,
+            TextSize = self.IsMobile and 11 or 10,
+            TextXAlignment = Enum.TextXAlignment.Center
+        })
+    end
+    
+    local fpsLabel = createInfoLabel("60")
+    local separator1 = createInfoLabel("|")
+    local pingLabel = createInfoLabel("0ms")
+    local separator2 = createInfoLabel("|")
+    local timeLabel = createInfoLabel("00:00")
+    
+    -- Make draggable
+    self:MakeDraggable(watermarkFrame, watermarkFrame)
+    
+    -- Update loop
+    task.spawn(function()
+        Stats:WaitForChild("Network"):WaitForChild("ServerStatsItem"):WaitForChild("Data Ping")
+        
+        local lastUpdate = 0
+        
+        while watermarkFrame.Parent do
+            local now = tick()
+            if now - lastUpdate >= 0.5 then
+                lastUpdate = now
+                
+                -- Get stats
+                local fps = math.floor(Stats.Workspace.Heartbeat:GetValue())
+                local ping = string.split(Stats.Network.ServerStatsItem["Data Ping"]:GetValueString(), " ")[1]
+                ping = string.split(ping, ".")[1]
+                local timeStr = os.date("%H:%M", os.time())
+                
+                -- Update labels
+                if self.IsMobile then
+                    fpsLabel.Text = tostring(fps)
+                    pingLabel.Text = ping .. "ms"
+                    timeLabel.Text = timeStr
+                else
+                    fpsLabel.Text = "FPS: " .. fps
+                    pingLabel.Text = "PING: " .. ping
+                    timeLabel.Text = timeStr
+                end
+            end
+            
+            task.wait(0.1)
+        end
+    end)
+    
+    return watermarkFrame
+end
+
+-- ============================================
+-- NOTIFICATION SYSTEM - ENHANCED
+-- ============================================
+
+-- Create notification holder
+local NotifsGui = LibraryFunctions:Create("ScreenGui", {
+    Name = "NotifsGui",
+    Parent = CoreGui,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
+
+local NotifsHolder = LibraryFunctions:Create("Frame", {
+    Name = "NotifsHolder",
+    Parent = NotifsGui,
+    AnchorPoint = Vector2.new(1, 0.5),
+    BackgroundTransparency = 1,
+    Position = UDim2.new(1, -20, 0.5, 0),
+    Size = UDim2.new(0, LibraryFunctions.IsMobile and 350 or 300, 1, -40)
+})
+
+local NotifsLayout = LibraryFunctions:Create("UIListLayout", {
+    Parent = NotifsHolder,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    VerticalAlignment = Enum.VerticalAlignment.Bottom,
+    Padding = UDim.new(0, 8)
+})
+
+function LibraryFunctions:CreateNotification(title, text, duration, notifType)
+    duration = duration or 5
+    notifType = notifType or "info"
+    
+    local colors = {
+        info = self.Theme.Primary,
+        success = self.Theme.Success,
+        warning = self.Theme.Warning,
+        error = self.Theme.Error
+    }
+    
+    local responsiveSize = self:GetResponsiveSize()
+    
+    local notification = self:Create("Frame", {
+        Name = "Notification",
+        Parent = NotifsHolder,
+        BackgroundColor3 = self.Theme.Background,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, self.IsMobile and 90 or 80),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, 50, 0, 0)
+    })
+    
+    self:CreateCorner(notification, 8)
+    self:CreateStroke(notification, colors[notifType], 2, 0)
+    
+    -- Content padding
+    self:CreatePadding(notification, 12)
+    
+    -- Icon (for mobile)
+    local iconText = {
+        info = "ℹ️",
+        success = "✅",
+        warning = "⚠️",
+        error = "❌"
+    }
+    
+    if self.IsMobile then
+        local icon = self:Create("TextLabel", {
+            Name = "Icon",
+            Parent = notification,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, 0),
+            Size = UDim2.new(0, 25, 0, 25),
+            Font = Enum.Font.GothamBold,
+            Text = iconText[notifType] or "ℹ️",
+            TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Center
+        })
+    end
+    
+    -- Title
+    local titleLabel = self:Create("TextLabel", {
+        Name = "Title",
+        Parent = notification,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, self.IsMobile and 30 or 0, 0, 0),
+        Size = UDim2.new(1, self.IsMobile and -60 or -30, 0, 22),
+        Font = Enum.Font.GothamBold,
+        Text = title,
+        TextColor3 = self.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    })
+    
+    -- Description
+    local descLabel = self:Create("TextLabel", {
+        Name = "Description",
+        Parent = notification,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, self.IsMobile and 30 or 0, 0, 22),
+        Size = UDim2.new(1, self.IsMobile and -60 or -30, 1, -22),
+        Font = Enum.Font.Gotham,
+        Text = text,
+        TextColor3 = self.Theme.TextDark,
+        TextSize = responsiveSize.TextSize - 2,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top
+    })
+    
+    -- Close button
+    local closeBtn = self:Create("TextButton", {
+        Name = "CloseButton",
+        Parent = notification,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -25, 0, 0),
+        Size = UDim2.new(0, 25, 0, 25),
+        Font = Enum.Font.GothamBold,
+        Text = "✕",
+        TextColor3 = Color3.fromRGB(150, 150, 150),
+        TextSize = self.IsMobile and 16 or 14
+    })
+    
+    -- Close button functionality
+    self:HandleMobileInput(closeBtn, {
+        OnClick = function()
+            self:RemoveNotification(notification)
+        end
+    })
+    
+    -- Animate in
+    self:Tween(notification, {
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 0.1
+    }, 0.3, Enum.EasingStyle.Back)
+    
+    -- Auto remove
+    task.spawn(function()
+        task.wait(duration)
+        if notification.Parent then
+            self:RemoveNotification(notification)
+        end
+    end)
+    
+    -- Add to notifications table
+    table.insert(self.Notifications, notification)
+    
+    return notification
+end
+
+function LibraryFunctions:RemoveNotification(notification)
+    self:Tween(notification, {
+        Position = UDim2.new(1, 50, notification.Position.Y.Scale, notification.Position.Y.Offset),
+        BackgroundTransparency = 1
+    }, 0.2)
+    
+    task.spawn(function()
+        task.wait(0.2)
+        if notification.Parent then
+            -- Remove from table
+            for i, notif in ipairs(self.Notifications) do
+                if notif == notification then
+                    table.remove(self.Notifications, i)
+                    break
+                end
+            end
+            notification:Destroy()
+        end
+    end)
+end
+
+-- ============================================
+-- MAIN WINDOW SYSTEM
+-- ============================================
+
+local lib = {
+    Animations = LibraryFunctions.Animations,
+    Theme = LibraryFunctions.Theme
+}
+
+function lib:Create(version, size, hidekey)
+    local hidekey = hidekey or Enum.KeyCode.RightShift
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    
+    -- Main ScreenGui
+    local Vice = LibraryFunctions:Create("ScreenGui", {
+        Name = "Vice",
+        Parent = CoreGui,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+        ResetOnSpawn = false
+    })
+    
+    -- Main Frame
+    local MainFrame = LibraryFunctions:Create("Frame", {
+        Name = "MainFrame",
+        Parent = Vice,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = LibraryFunctions.Theme.Background,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = size or responsiveSize.MainSize,
+        ClipsDescendants = true
+    })
+    
+    LibraryFunctions:CreateCorner(MainFrame, 12)
+    LibraryFunctions:CreateGlow(MainFrame, LibraryFunctions.Theme.Primary, 0.2)
+    
+    -- Mobile optimization
+    if LibraryFunctions.IsMobile then
+        MainFrame.Active = true
+        MainFrame.Selectable = false
+    end
+    
+    -- Header/Title Bar
+    local HeaderFrame = LibraryFunctions:Create("Frame", {
+        Name = "Header",
+        Parent = MainFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, LibraryFunctions.IsMobile and 50 or 40),
+        Position = UDim2.new(0, 0, 0, 0)
+    })
+    
+    LibraryFunctions:CreateCorner(HeaderFrame, 12)
+    
+    -- Fix corner clipping
+    local HeaderClip = LibraryFunctions:Create("Frame", {
+        Name = "HeaderClip",
+        Parent = HeaderFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 1, -12),
+        Size = UDim2.new(1, 0, 0, 12)
+    })
+    
+    -- Title
+    local TitleLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Title",
+        Parent = HeaderFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 15, 0, 0),
+        Size = UDim2.new(1, -80, 1, 0),
+        Font = Enum.Font.GothamBold,
+        Text = "VICE HUB" .. (version and " " .. version or ""),
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TitleSize,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    -- Close Button
+    local CloseButton = LibraryFunctions:Create("TextButton", {
+        Name = "CloseButton",
+        Parent = HeaderFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.Error,
+        Position = UDim2.new(1, LibraryFunctions.IsMobile and -40 or -30, 0.5, LibraryFunctions.IsMobile and -15 or -12),
+        Size = UDim2.new(0, LibraryFunctions.IsMobile and 30 or 24, 0, LibraryFunctions.IsMobile and 30 or 24),
+        Font = Enum.Font.GothamBold,
+        Text = "✕",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextSize = LibraryFunctions.IsMobile and 16 or 12,
+        AutoButtonColor = false
+    })
+    
+    LibraryFunctions:CreateCorner(CloseButton, 6)
+    
+    -- Content Frame
+    local ContentFrame = LibraryFunctions:Create("Frame", {
+        Name = "Content",
+        Parent = MainFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, HeaderFrame.Size.Y.Offset),
+        Size = UDim2.new(1, 0, 1, -HeaderFrame.Size.Y.Offset)
+    })
+    
+    -- Tab Container
+    local TabContainer = LibraryFunctions:Create("Frame", {
+        Name = "TabContainer",
+        Parent = ContentFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundLight,
+        BorderSizePixel = 0,
+        Size = LibraryFunctions.IsMobile and 
+            (LibraryFunctions.ViewportSize.Y > LibraryFunctions.ViewportSize.X and 
+             UDim2.new(1, 0, 0, 50) or UDim2.new(0, 120, 1, 0)) or 
+            UDim2.new(0, 150, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0)
+    })
+    
+    LibraryFunctions:CreateCorner(TabContainer, 8)
+    
+    -- Content Container
+    local PageContainer = LibraryFunctions:Create("Frame", {
+        Name = "PageContainer",
+        Parent = ContentFrame,
+        BackgroundTransparency = 1,
+        Position = LibraryFunctions.IsMobile and 
+            (LibraryFunctions.ViewportSize.Y > LibraryFunctions.ViewportSize.X and 
+             UDim2.new(0, 0, 0, 55) or UDim2.new(0, 125, 0, 0)) or 
+            UDim2.new(0, 155, 0, 0),
+        Size = LibraryFunctions.IsMobile and 
+            (LibraryFunctions.ViewportSize.Y > LibraryFunctions.ViewportSize.X and 
+             UDim2.new(1, 0, 1, -55) or UDim2.new(1, -125, 1, 0)) or 
+            UDim2.new(1, -155, 1, 0)
+    })
+    
+    -- Make draggable
+    LibraryFunctions:MakeDraggable(HeaderFrame, MainFrame)
+    
+    -- Close functionality
+    LibraryFunctions:HandleMobileInput(CloseButton, {
+        OnClick = function()
+            LibraryFunctions:Tween(MainFrame, {
+                Size = UDim2.new(0, 0, 0, 0)
+            }, 0.3)
+            
+            task.spawn(function()
+                task.wait(0.3)
+                Vice:Destroy()
+            end)
+        end
+    })
+    
+    -- Hide/Show toggle
+    local isVisible = true
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.KeyCode == hidekey then
+            isVisible = not isVisible
+            LibraryFunctions:Tween(MainFrame, {
+                Size = isVisible and (size or responsiveSize.MainSize) or UDim2.new(0, 0, 0, 0)
+            }, 0.3)
+        end
+    end)
+    
+    -- Library object
+    local Library = {
+        MainFrame = MainFrame,
+        TabContainer = TabContainer,
+        PageContainer = PageContainer,
+        Tabs = {},
+        CurrentTab = nil,
+        Flags = LibraryFunctions.Flags
+    }
+    
+    return Library
+end
+
+-- Export
+return lib
+
+-- ============================================
+-- TAB SYSTEM - ENHANCED
+-- ============================================
+
+function lib:CreateTab(name, icon)
+    local Library = self
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    local isPortraitMobile = LibraryFunctions.IsMobile and LibraryFunctions.ViewportSize.Y > LibraryFunctions.ViewportSize.X
+    
+    -- Tab Button
+    local TabButton = LibraryFunctions:Create("Frame", {
+        Name = name .. "TabButton",
+        Parent = Library.TabContainer,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark,
+        BorderSizePixel = 0,
+        Size = isPortraitMobile and 
+            UDim2.new(0, 100, 1, -10) or 
+            UDim2.new(1, -10, 0, responsiveSize.ButtonHeight)
+    })
+    
+    LibraryFunctions:CreateCorner(TabButton, 6)
+    
+    -- Tab Button Content
+    local TabContent = LibraryFunctions:Create("Frame", {
+        Name = "Content",
+        Parent = TabButton,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0)
+    })
+    
+    -- Icon (if provided)
+    local TabIcon = nil
+    if icon then
+        TabIcon = LibraryFunctions:Create("ImageLabel", {
+            Name = "Icon",
+            Parent = TabContent,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 10, 0.5, -10),
+            Size = UDim2.new(0, 20, 0, 20),
+            Image = icon,
+            ImageColor3 = LibraryFunctions.Theme.TextDark
+        })
+    end
+    
+    -- Tab Label
+    local TabLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = TabContent,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, TabIcon and 35 or 10, 0, 0),
+        Size = UDim2.new(1, TabIcon and -45 or -20, 1, 0),
+        Font = Enum.Font.GothamSemibold,
+        Text = name,
+        TextColor3 = LibraryFunctions.Theme.TextDark,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    })
+    
+    -- Tab Page
+    local TabPage = LibraryFunctions:Create("ScrollingFrame", {
+        Name = name .. "Page",
+        Parent = Library.PageContainer,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        ScrollBarThickness = LibraryFunctions.IsMobile and 8 or 6,
+        ScrollBarImageColor3 = LibraryFunctions.Theme.Primary,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        VerticalScrollBarInset = Enum.ScrollBarInset.None,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+    })
+    
+    LibraryFunctions:CreatePadding(TabPage, 10)
+    
+    -- Tab Page Layout
+    local PageLayout = LibraryFunctions:Create("UIListLayout", {
+        Parent = TabPage,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 8)
+    })
+    
+    -- Tab Container Layout (for mobile portrait)
+    if isPortraitMobile and not Library.TabContainer:FindFirstChild("UIListLayout") then
+        local TabLayout = LibraryFunctions:Create("UIListLayout", {
+            Parent = Library.TabContainer,
+            FillDirection = Enum.FillDirection.Horizontal,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+            Padding = UDim.new(0, 5)
+        })
+    elseif not isPortraitMobile and not Library.TabContainer:FindFirstChild("UIListLayout") then
+        local TabLayout = LibraryFunctions:Create("UIListLayout", {
+            Parent = Library.TabContainer,
+            FillDirection = Enum.FillDirection.Vertical,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            VerticalAlignment = Enum.VerticalAlignment.Top,
+            Padding = UDim.new(0, 5)
+        })
+        
+        LibraryFunctions:CreatePadding(Library.TabContainer, 5)
+    end
+    
+    -- Tab Selection Logic
+    local function SelectTab()
+        -- Deselect all tabs
+        for _, tab in pairs(Library.Tabs) do
+            tab.Button.BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark
+            tab.Label.TextColor3 = LibraryFunctions.Theme.TextDark
+            if tab.Icon then
+                tab.Icon.ImageColor3 = LibraryFunctions.Theme.TextDark
+            end
+            tab.Page.Visible = false
+        end
+        
+        -- Select this tab
+        TabButton.BackgroundColor3 = LibraryFunctions.Theme.Primary
+        TabLabel.TextColor3 = LibraryFunctions.Theme.Text
+        if TabIcon then
+            TabIcon.ImageColor3 = LibraryFunctions.Theme.Text
+        end
+        TabPage.Visible = true
+        Library.CurrentTab = name
+    end
+    
+    -- Tab Click Handler
+    LibraryFunctions:HandleMobileInput(TabButton, {
+        OnClick = function()
+            SelectTab()
+        end
+    })
+    
+    -- Store tab data
+    local Tab = {
+        Name = name,
+        Button = TabButton,
+        Label = TabLabel,
+        Icon = TabIcon,
+        Page = TabPage,
+        Layout = PageLayout,
+        Elements = {}
+    }
+    
+    Library.Tabs[name] = Tab
+    
+    -- Select first tab automatically
+    if #Library.Tabs == 1 then
+        SelectTab()
+    end
+    
+    return Tab
+end
+
+-- ============================================
+-- UI ELEMENTS
+-- ============================================
+
+-- BUTTON ELEMENT
+function lib:CreateButton(tab, properties)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    
+    local ButtonFrame = LibraryFunctions:Create("Frame", {
+        Name = "ButtonFrame",
+        Parent = tab.Page,
+        BackgroundColor3 = LibraryFunctions.Theme.Primary,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, responsiveSize.ButtonHeight)
+    })
+    
+    LibraryFunctions:CreateCorner(ButtonFrame, 8)
+    
+    -- Button Label
+    local ButtonLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = ButtonFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        Font = Enum.Font.GothamSemibold,
+        Text = properties.Text or "Button",
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Center
+    })
+    
+    -- Button Click Handler
+    local originalColor = ButtonFrame.BackgroundColor3
+    
+    LibraryFunctions:HandleMobileInput(ButtonFrame, {
+        OnStart = function()
+            LibraryFunctions:Tween(ButtonFrame, {
+                BackgroundColor3 = originalColor:Lerp(Color3.new(1, 1, 1), 0.2),
+                Size = UDim2.new(1, 0, 0, responsiveSize.ButtonHeight - 2)
+            }, 0.1)
+        end,
+        
+        OnEnd = function()
+            LibraryFunctions:Tween(ButtonFrame, {
+                BackgroundColor3 = originalColor,
+                Size = UDim2.new(1, 0, 0, responsiveSize.ButtonHeight)
+            }, 0.1)
+        end,
+        
+        OnClick = function()
+            if properties.Callback then
+                properties.Callback()
+            end
+        end
+    })
+    
+    return ButtonFrame
+end
+
+-- TOGGLE ELEMENT
+function lib:CreateToggle(tab, properties)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    local isToggled = properties.Default or false
+    
+    local ToggleFrame = LibraryFunctions:Create("Frame", {
+        Name = "ToggleFrame",
+        Parent = tab.Page,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundLight,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, responsiveSize.ToggleHeight)
+    })
+    
+    LibraryFunctions:CreateCorner(ToggleFrame, 8)
+    LibraryFunctions:CreateStroke(ToggleFrame, LibraryFunctions.Theme.Border, 1, 0.5)
+    
+    -- Toggle Label
+    local ToggleLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = ToggleFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 15, 0, 0),
+        Size = UDim2.new(1, -80, 1, 0),
+        Font = Enum.Font.GothamSemibold,
+        Text = properties.Text or "Toggle",
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    -- Switch Container
+    local SwitchContainer = LibraryFunctions:Create("Frame", {
+        Name = "SwitchContainer",
+        Parent = ToggleFrame,
+        BackgroundColor3 = isToggled and LibraryFunctions.Theme.Primary or LibraryFunctions.Theme.BackgroundDark,
+        Position = UDim2.new(1, responsiveSize.MinTouchSize == 44 and -65 or -55, 0.5, responsiveSize.MinTouchSize == 44 and -15 or -12),
+        Size = UDim2.new(0, responsiveSize.MinTouchSize == 44 and 50 or 40, 0, responsiveSize.MinTouchSize == 44 and 30 or 24)
+    })
+    
+    LibraryFunctions:CreateCorner(SwitchContainer, 15)
+    
+    -- Switch Handle
+    local SwitchHandle = LibraryFunctions:Create("Frame", {
+        Name = "Handle",
+        Parent = SwitchContainer,
+        BackgroundColor3 = LibraryFunctions.Theme.Text,
+        Position = isToggled and 
+            UDim2.new(1, responsiveSize.MinTouchSize == 44 and -26 or -20, 0.5, responsiveSize.MinTouchSize == 44 and -11 or -9) or
+            UDim2.new(0, 4, 0.5, responsiveSize.MinTouchSize == 44 and -11 or -9),
+        Size = UDim2.new(0, responsiveSize.MinTouchSize == 44 and 22 or 18, 0, responsiveSize.MinTouchSize == 44 and 22 or 18)
+    })
+    
+    LibraryFunctions:CreateCorner(SwitchHandle, 11)
+    
+    -- Toggle Function
+    local function UpdateToggle()
+        local targetColor = isToggled and LibraryFunctions.Theme.Primary or LibraryFunctions.Theme.BackgroundDark
+        local targetPos = isToggled and 
+            UDim2.new(1, responsiveSize.MinTouchSize == 44 and -26 or -20, 0.5, responsiveSize.MinTouchSize == 44 and -11 or -9) or
+            UDim2.new(0, 4, 0.5, responsiveSize.MinTouchSize == 44 and -11 or -9)
+        
+        LibraryFunctions:Tween(SwitchContainer, {BackgroundColor3 = targetColor}, 0.2)
+        LibraryFunctions:Tween(SwitchHandle, {Position = targetPos}, 0.2)
+        
+        if properties.Callback then
+            properties.Callback(isToggled)
+        end
+    end
+    
+    -- Toggle Click Handler
+    LibraryFunctions:HandleMobileInput(ToggleFrame, {
+        OnClick = function()
+            isToggled = not isToggled
+            UpdateToggle()
+        end
+    })
+    
+    -- Set initial state
+    UpdateToggle()
+    
+    -- Store in flags
+    if properties.Flag then
+        LibraryFunctions.Flags[properties.Flag] = isToggled
+    end
+    
+    return {
+        Frame = ToggleFrame,
+        SetValue = function(value)
+            isToggled = value
+            UpdateToggle()
+            if properties.Flag then
+                LibraryFunctions.Flags[properties.Flag] = value
+            end
+        end,
+        GetValue = function()
+            return isToggled
+        end
+    }
+end
+
+-- SLIDER ELEMENT
+function lib:CreateSlider(tab, properties)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    local min = properties.Min or 0
+    local max = properties.Max or 100
+    local default = properties.Default or min
+    local increment = properties.Increment or 1
+    local suffix = properties.Suffix or ""
+    
+    local SliderFrame = LibraryFunctions:Create("Frame", {
+        Name = "SliderFrame",
+        Parent = tab.Page,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundLight,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, responsiveSize.SliderHeight)
+    })
+    
+    LibraryFunctions:CreateCorner(SliderFrame, 8)
+    LibraryFunctions:CreateStroke(SliderFrame, LibraryFunctions.Theme.Border, 1, 0.5)
+    
+    -- Slider Label
+    local SliderLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = SliderFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 15, 0, 5),
+        Size = UDim2.new(1, -100, 0, 20),
+        Font = Enum.Font.GothamSemibold,
+        Text = properties.Text or "Slider",
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    -- Value Label
+    local ValueLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Value",
+        Parent = SliderFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -80, 0, 5),
+        Size = UDim2.new(0, 70, 0, 20),
+        Font = Enum.Font.GothamSemibold,
+        Text = tostring(default) .. suffix,
+        TextColor3 = LibraryFunctions.Theme.Primary,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Right
+    })
+    
+    -- Slider Track
+    local SliderTrack = LibraryFunctions:Create("Frame", {
+        Name = "Track",
+        Parent = SliderFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark,
+        Position = UDim2.new(0, 15, 1, -20),
+        Size = UDim2.new(1, -30, 0, 6)
+    })
+    
+    LibraryFunctions:CreateCorner(SliderTrack, 3)
+    
+    -- Slider Fill
+    local SliderFill = LibraryFunctions:Create("Frame", {
+        Name = "Fill",
+        Parent = SliderTrack,
+        BackgroundColor3 = LibraryFunctions.Theme.Primary,
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    })
+    
+    LibraryFunctions:CreateCorner(SliderFill, 3)
+    
+    -- Slider Handle
+    local SliderHandle = LibraryFunctions:Create("Frame", {
+        Name = "Handle",
+        Parent = SliderTrack,
+        BackgroundColor3 = LibraryFunctions.Theme.Text,
+        Position = UDim2.new((default - min) / (max - min), responsiveSize.MinTouchSize == 44 and -12 or -8, 0.5, responsiveSize.MinTouchSize == 44 and -12 or -8),
+        Size = UDim2.new(0, responsiveSize.MinTouchSize == 44 and 24 or 16, 0, responsiveSize.MinTouchSize == 44 and 24 or 16),
+        ZIndex = 5
+    })
+    
+    LibraryFunctions:CreateCorner(SliderHandle, responsiveSize.MinTouchSize == 44 and 12 or 8)
+    
+    local currentValue = default
+    local isDragging = false
+    
+    -- Update slider visual and value
+    local function UpdateSlider(inputPos)
+        local trackPos = SliderTrack.AbsolutePosition.X
+        local trackSize = SliderTrack.AbsoluteSize.X
+        local relativePos = math.clamp((inputPos - trackPos) / trackSize, 0, 1)
+        
+        currentValue = min + (max - min) * relativePos
+        currentValue = LibraryFunctions:Round(currentValue, increment)
+        currentValue = math.clamp(currentValue, min, max)
+        
+        local displayPos = (currentValue - min) / (max - min)
+        
+        -- Update visuals
+        LibraryFunctions:Tween(SliderFill, {Size = UDim2.new(displayPos, 0, 1, 0)}, 0.1)
+        LibraryFunctions:Tween(SliderHandle, {
+            Position = UDim2.new(displayPos, responsiveSize.MinTouchSize == 44 and -12 or -8, 0.5, responsiveSize.MinTouchSize == 44 and -12 or -8)
+        }, 0.1)
+        
+        ValueLabel.Text = tostring(currentValue) .. suffix
+        
+        if properties.Callback then
+            properties.Callback(currentValue)
+        end
+    end
+    
+    -- Slider interaction
+    LibraryFunctions:HandleMobileInput(SliderFrame, {
+        OnStart = function(input)
+            isDragging = true
+            UpdateSlider(input.Position.X)
+            
+            -- Visual feedback
+            LibraryFunctions:Tween(SliderHandle, {
+                Size = UDim2.new(0, responsiveSize.MinTouchSize == 44 and 28 or 20, 0, responsiveSize.MinTouchSize == 44 and 28 or 20)
+            }, 0.1)
+        end,
+        
+        OnDrag = function(input)
+            if isDragging then
+                UpdateSlider(input.Position.X)
+            end
+        end,
+        
+        OnEnd = function()
+            isDragging = false
+            LibraryFunctions:Tween(SliderHandle, {
+                Size = UDim2.new(0, responsiveSize.MinTouchSize == 44 and 24 or 16, 0, responsiveSize.MinTouchSize == 44 and 24 or 16)
+            }, 0.1)
+        end
+    })
+    
+    -- Initialize
+    UpdateSlider(SliderTrack.AbsolutePosition.X + (default - min) / (max - min) * SliderTrack.AbsoluteSize.X)
+    
+    -- Store in flags
+    if properties.Flag then
+        LibraryFunctions.Flags[properties.Flag] = currentValue
+    end
+    
+    return {
+        Frame = SliderFrame,
+        SetValue = function(value)
+            currentValue = math.clamp(value, min, max)
+            local trackPos = SliderTrack.AbsolutePosition.X + (currentValue - min) / (max - min) * SliderTrack.AbsoluteSize.X
+            UpdateSlider(trackPos)
+            if properties.Flag then
+                LibraryFunctions.Flags[properties.Flag] = currentValue
+            end
+        end,
+        GetValue = function()
+            return currentValue
+        end
+    }
+end
+
+-- ============================================
+-- DROPDOWN ELEMENT
+-- ============================================
+
+function lib:CreateDropdown(tab, properties)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    local options = properties.Options or {"Option 1", "Option 2"}
+    local defaultOption = properties.Default or options[1]
+    local currentOption = defaultOption
+    local isOpen = false
+    
+    local DropdownFrame = LibraryFunctions:Create("Frame", {
+        Name = "DropdownFrame",
+        Parent = tab.Page,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundLight,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, responsiveSize.DropdownHeight),
+        ClipsDescendants = false,
+        ZIndex = 10
+    })
+    
+    LibraryFunctions:CreateCorner(DropdownFrame, 8)
+    LibraryFunctions:CreateStroke(DropdownFrame, LibraryFunctions.Theme.Border, 1, 0.5)
+    
+    -- Dropdown Header
+    local DropdownHeader = LibraryFunctions:Create("Frame", {
+        Name = "Header",
+        Parent = DropdownFrame,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, responsiveSize.DropdownHeight)
+    })
+    
+    -- Dropdown Label
+    local DropdownLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = DropdownHeader,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 15, 0, 0),
+        Size = UDim2.new(0.6, -15, 1, 0),
+        Font = Enum.Font.GothamSemibold,
+        Text = properties.Text or "Dropdown",
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    })
+    
+    -- Selected Option Display
+    local SelectedOption = LibraryFunctions:Create("TextLabel", {
+        Name = "Selected",
+        Parent = DropdownHeader,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.6, 0, 0, 0),
+        Size = UDim2.new(0.4, -35, 1, 0),
+        Font = Enum.Font.Gotham,
+        Text = currentOption,
+        TextColor3 = LibraryFunctions.Theme.Primary,
+        TextSize = responsiveSize.TextSize - 1,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    })
+    
+    -- Dropdown Arrow
+    local DropdownArrow = LibraryFunctions:Create("TextLabel", {
+        Name = "Arrow",
+        Parent = DropdownHeader,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -25, 0.5, -8),
+        Size = UDim2.new(0, 16, 0, 16),
+        Font = Enum.Font.GothamBold,
+        Text = "▼",
+        TextColor3 = LibraryFunctions.Theme.TextDark,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Center
+    })
+    
+    -- Options Container
+    local OptionsContainer = LibraryFunctions:Create("ScrollingFrame", {
+        Name = "Options",
+        Parent = DropdownFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.Background,
+        Position = UDim2.new(0, 0, 1, 5),
+        Size = UDim2.new(1, 0, 0, 0),
+        ScrollBarThickness = LibraryFunctions.IsMobile and 6 or 4,
+        ScrollBarImageColor3 = LibraryFunctions.Theme.Primary,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ClipsDescendants = true,
+        ZIndex = 15
+    })
+    
+    LibraryFunctions:CreateCorner(OptionsContainer, 8)
+    LibraryFunctions:CreateStroke(OptionsContainer, LibraryFunctions.Theme.Border, 1, 0.5)
+    
+    -- Options Layout
+    local OptionsLayout = LibraryFunctions:Create("UIListLayout", {
+        Parent = OptionsContainer,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 2)
+    })
+    
+    LibraryFunctions:CreatePadding(OptionsContainer, 5)
+    
+    -- Create option buttons
+    local optionButtons = {}
+    for i, option in ipairs(options) do
+        local OptionButton = LibraryFunctions:Create("Frame", {
+            Name = "Option" .. i,
+            Parent = OptionsContainer,
+            BackgroundColor3 = option == currentOption and LibraryFunctions.Theme.Primary or Color3.fromRGB(0, 0, 0, 0),
+            BackgroundTransparency = option == currentOption and 0.8 or 1,
+            Size = UDim2.new(1, 0, 0, responsiveSize.ButtonHeight - 5),
+            ZIndex = 16
+        })
+        
+        LibraryFunctions:CreateCorner(OptionButton, 6)
+        
+        local OptionLabel = LibraryFunctions:Create("TextLabel", {
+            Name = "Label",
+            Parent = OptionButton,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, -20, 1, 0),
+            Position = UDim2.new(0, 10, 0, 0),
+            Font = Enum.Font.Gotham,
+            Text = option,
+            TextColor3 = option == currentOption and LibraryFunctions.Theme.Text or LibraryFunctions.Theme.TextDark,
+            TextSize = responsiveSize.TextSize,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 17
+        })
+        
+        -- Option click handler
+        LibraryFunctions:HandleMobileInput(OptionButton, {
+            OnClick = function()
+                -- Update selection
+                currentOption = option
+                SelectedOption.Text = option
+                
+                -- Update visual states
+                for _, btn in pairs(optionButtons) do
+                    btn.BackgroundTransparency = 1
+                    btn:FindFirstChild("Label").TextColor3 = LibraryFunctions.Theme.TextDark
+                end
+                
+                OptionButton.BackgroundTransparency = 0.8
+                OptionLabel.TextColor3 = LibraryFunctions.Theme.Text
+                
+                -- Close dropdown
+                isOpen = false
+                LibraryFunctions:Tween(OptionsContainer, {
+                    Size = UDim2.new(1, 0, 0, 0)
+                }, 0.2)
+                LibraryFunctions:Tween(DropdownArrow, {Rotation = 0}, 0.2)
+                
+                task.wait(0.2)
+                OptionsContainer.Visible = false
+                
+                -- Callback
+                if properties.Callback then
+                    properties.Callback(option)
+                end
+                
+                -- Store in flags
+                if properties.Flag then
+                    LibraryFunctions.Flags[properties.Flag] = option
+                end
+            end
+        })
+        
+        optionButtons[i] = OptionButton
+    end
+    
+    -- Toggle dropdown
+    local function ToggleDropdown()
+        isOpen = not isOpen
+        
+        if isOpen then
+            OptionsContainer.Visible = true
+            local targetHeight = math.min(#options * (responsiveSize.ButtonHeight - 3) + 10, 200)
+            LibraryFunctions:Tween(OptionsContainer, {
+                Size = UDim2.new(1, 0, 0, targetHeight)
+            }, 0.2)
+            LibraryFunctions:Tween(DropdownArrow, {Rotation = 180}, 0.2)
+        else
+            LibraryFunctions:Tween(OptionsContainer, {
+                Size = UDim2.new(1, 0, 0, 0)
+            }, 0.2)
+            LibraryFunctions:Tween(DropdownArrow, {Rotation = 0}, 0.2)
+            
+            task.wait(0.2)
+            OptionsContainer.Visible = false
+        end
+    end
+    
+    -- Header click handler
+    LibraryFunctions:HandleMobileInput(DropdownHeader, {
+        OnClick = ToggleDropdown
+    })
+    
+    -- Store in flags
+    if properties.Flag then
+        LibraryFunctions.Flags[properties.Flag] = currentOption
+    end
+    
+    return {
+        Frame = DropdownFrame,
+        SetValue = function(value)
+            if table.find(options, value) then
+                currentOption = value
+                SelectedOption.Text = value
+                
+                -- Update option buttons
+                for i, btn in pairs(optionButtons) do
+                    local isSelected = options[i] == value
+                    btn.BackgroundTransparency = isSelected and 0.8 or 1
+                    btn:FindFirstChild("Label").TextColor3 = isSelected and LibraryFunctions.Theme.Text or LibraryFunctions.Theme.TextDark
+                end
+                
+                if properties.Flag then
+                    LibraryFunctions.Flags[properties.Flag] = value
+                end
+            end
+        end,
+        GetValue = function()
+            return currentOption
+        end,
+        UpdateOptions = function(newOptions)
+            options = newOptions
+            -- Rebuild options (simplified for brevity)
+            for _, btn in pairs(optionButtons) do
+                btn:Destroy()
+            end
+            optionButtons = {}
+            -- Re-create options... (implementation similar to above)
+        end
+    }
+end
+
+-- ============================================
+-- INPUT FIELD ELEMENT
+-- ============================================
+
+function lib:CreateInput(tab, properties)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    local placeholderText = properties.Placeholder or "Enter text..."
+    local defaultText = properties.Default or ""
+    
+    local InputFrame = LibraryFunctions:Create("Frame", {
+        Name = "InputFrame",
+        Parent = tab.Page,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundLight,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, responsiveSize.ButtonHeight + 10)
+    })
+    
+    LibraryFunctions:CreateCorner(InputFrame, 8)
+    LibraryFunctions:CreateStroke(InputFrame, LibraryFunctions.Theme.Border, 1, 0.5)
+    
+    -- Input Label
+    local InputLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = InputFrame,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 15, 0, 5),
+        Size = UDim2.new(1, -30, 0, 20),
+        Font = Enum.Font.GothamSemibold,
+        Text = properties.Text or "Input",
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left
+    })
+    
+    -- Text Input Box
+    local TextBox = LibraryFunctions:Create("TextBox", {
+        Name = "TextBox",
+        Parent = InputFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.BackgroundDark,
+        Position = UDim2.new(0, 15, 1, -30),
+        Size = UDim2.new(1, -30, 0, 25),
+        Font = Enum.Font.Gotham,
+        PlaceholderText = placeholderText,
+        PlaceholderColor3 = LibraryFunctions.Theme.TextDark,
+        Text = defaultText,
+        TextColor3 = LibraryFunctions.Theme.Text,
+        TextSize = responsiveSize.TextSize - 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearButtonOnFocus = LibraryFunctions.IsMobile,
+        TextWrapped = false
+    })
+    
+    LibraryFunctions:CreateCorner(TextBox, 6)
+    LibraryFunctions:CreatePadding(TextBox, 8)
+    
+    -- Focus effects
+    local originalStroke = InputFrame:FindFirstChild("UIStroke")
+    
+    TextBox.Focused:Connect(function()
+        LibraryFunctions:Tween(originalStroke, {
+            Color = LibraryFunctions.Theme.Primary,
+            Transparency = 0
+        }, 0.2)
+    end)
+    
+    TextBox.FocusLost:Connect(function(enterPressed)
+        LibraryFunctions:Tween(originalStroke, {
+            Color = LibraryFunctions.Theme.Border,
+            Transparency = 0.5
+        }, 0.2)
+        
+        if enterPressed or not LibraryFunctions.IsMobile then
+            if properties.Callback then
+                properties.Callback(TextBox.Text)
+            end
+            
+            if properties.Flag then
+                LibraryFunctions.Flags[properties.Flag] = TextBox.Text
+            end
+        end
+    end)
+    
+    -- For mobile, also trigger on text change with debounce
+    if LibraryFunctions.IsMobile then
+        local debounceTime = 0.5
+        local lastChange = 0
+        
+        TextBox:GetPropertyChangedSignal("Text"):Connect(function()
+            lastChange = tick()
+            task.wait(debounceTime)
+            
+            if tick() - lastChange >= debounceTime then
+                if properties.Callback then
+                    properties.Callback(TextBox.Text)
+                end
+                
+                if properties.Flag then
+                    LibraryFunctions.Flags[properties.Flag] = TextBox.Text
+                end
+            end
+        end)
+    end
+    
+    -- Store in flags
+    if properties.Flag then
+        LibraryFunctions.Flags[properties.Flag] = defaultText
+    end
+    
+    return {
+        Frame = InputFrame,
+        TextBox = TextBox,
+        SetValue = function(value)
+            TextBox.Text = value
+            if properties.Flag then
+                LibraryFunctions.Flags[properties.Flag] = value
+            end
+        end,
+        GetValue = function()
+            return TextBox.Text
+        end
+    }
+end
+
+-- ============================================
+-- SECTION SYSTEM
+-- ============================================
+
+function lib:CreateSection(tab, name)
+    local responsiveSize = LibraryFunctions:GetResponsiveSize()
+    
+    local SectionFrame = LibraryFunctions:Create("Frame", {
+        Name = "Section_" .. name,
+        Parent = tab.Page,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 35)
+    })
+    
+    -- Section Line
+    local SectionLine = LibraryFunctions:Create("Frame", {
+        Name = "Line",
+        Parent = SectionFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.Border,
+        Position = UDim2.new(0, 0, 0.5, -1),
+        Size = UDim2.new(1, 0, 0, 2)
+    })
+    
+    LibraryFunctions:CreateCorner(SectionLine, 1)
+    
+    -- Section Label Background
+    local LabelBg = LibraryFunctions:Create("Frame", {
+        Name = "LabelBackground",
+        Parent = SectionFrame,
+        BackgroundColor3 = LibraryFunctions.Theme.Background,
+        Position = UDim2.new(0.5, -50, 0.5, -12),
+        Size = UDim2.new(0, 100, 0, 24)
+    })
+    
+    -- Section Label
+    local SectionLabel = LibraryFunctions:Create("TextLabel", {
+        Name = "Label",
+        Parent = LabelBg,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = Enum.Font.GothamBold,
+        Text = name,
+        TextColor3 = LibraryFunctions.Theme.Primary,
+        TextSize = responsiveSize.TextSize + 1,
+        TextXAlignment = Enum.TextXAlignment.Center
+    })
+    
+    -- Auto-resize label background to fit text
+    local textBounds = game:GetService("TextService"):GetTextSize(
+        name, 
+        responsiveSize.TextSize + 1, 
+        Enum.Font.GothamBold, 
+        Vector2.new(1000, 24)
+    )
+    
+    LabelBg.Size = UDim2.new(0, textBounds.X + 20, 0, 24)
+    LabelBg.Position = UDim2.new(0.5, -(textBounds.X + 20)/2, 0.5, -12)
+    
+    return SectionFrame
+end
+
+-- ============================================
+-- UTILITY FUNCTIONS
+-- ============================================
+
+-- Notification shortcuts
+function lib:Notify(title, text, duration, type)
+    return LibraryFunctions:CreateNotification(title, text, duration, type)
+end
+
+function lib:NotifySuccess(title, text, duration)
+    return self:Notify(title, text, duration, "success")
+end
+
+function lib:NotifyWarning(title, text, duration)
+    return self:Notify(title, text, duration, "warning")
+end
+
+function lib:NotifyError(title, text, duration)
+    return self:Notify(title, text, duration, "error")
+end
+
+-- Watermark creation
+function lib:CreateWatermark(title)
+    return LibraryFunctions:CreateWatermark(title)
+end
+
+-- Flag management
+function lib:GetFlag(flag)
+    return LibraryFunctions.Flags[flag]
+end
+
+function lib:SetFlag(flag, value)
+    LibraryFunctions.Flags[flag] = value
+end
+
+function lib:GetAllFlags()
+    return LibraryFunctions.Flags
+end
+
+-- Configuration save/load
+function lib:SaveConfig(name)
+    name = name or "default"
+    local config = {}
+    
+    for flag, value in pairs(LibraryFunctions.Flags) do
+        config[flag] = value
+    end
+    
+    -- Save to datastore or file (implementation depends on executor)
+    if writefile then
+        local jsonData = game:GetService("HttpService"):JSONEncode(config)
+        writefile("vicehub_" .. name .. ".json", jsonData)
+        self:NotifySuccess("Config Saved", "Configuration saved as: " .. name)
+    else
+        self:NotifyWarning("Save Failed", "File system not available")
+    end
+    
+    return config
+end
+
+function lib:LoadConfig(name)
+    name = name or "default"
+    
+    if readfile and isfile("vicehub_" .. name .. ".json") then
+        local success, config = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(readfile("vicehub_" .. name .. ".json"))
+        end)
+        
+        if success and config then
+            for flag, value in pairs(config) do
+                LibraryFunctions.Flags[flag] = value
+                -- Update UI elements (would need element tracking for full implementation)
+            end
+            
+            self:NotifySuccess("Config Loaded", "Configuration loaded: " .. name)
+            return config
+        else
+            self:NotifyError("Load Failed", "Failed to load config: " .. name)
+        end
+    else
+        self:NotifyWarning("Config Not Found", "Config file not found: " .. name)
+    end
+    
+    return nil
+end
+
+-- Cleanup function
+function lib:Destroy()
+    -- Disconnect all connections
+    for _, connection in pairs(LibraryFunctions.Connections) do
+        if connection and connection.Connected then
+            connection:Disconnect()
+        end
+    end
+    
+    -- Clear notifications
+    for _, notification in pairs(LibraryFunctions.Notifications) do
+        if notification and notification.Parent then
+            notification:Destroy()
+        end
+    end
+    
+    -- Destroy main GUIs
+    if CoreGui:FindFirstChild("Vice") then
+        CoreGui:FindFirstChild("Vice"):Destroy()
+    end
+    
+    if CoreGui:FindFirstChild("NotifsGui") then
+        CoreGui:FindFirstChild("NotifsGui"):Destroy()
+    end
+    
+    if CoreGui:FindFirstChild("WatermarkUI") then
+        CoreGui:FindFirstChild("WatermarkUI"):Destroy()
+    end
+    
+    -- Clear tables
+    LibraryFunctions.Connections = {}
+    LibraryFunctions.Notifications = {}
+    LibraryFunctions.Flags = {}
+end
+
+-- Device info
+function lib:GetDeviceInfo()
+    return {
+        IsMobile = LibraryFunctions.IsMobile,
+        HasTouch = LibraryFunctions.HasTouch,
+        HasMouse = LibraryFunctions.HasMouse,
+        HasKeyboard = LibraryFunctions.HasKeyboard,
+        ViewportSize = LibraryFunctions.ViewportSize,
+        IsPortrait = LibraryFunctions.ViewportSize.Y > LibraryFunctions.ViewportSize.X
+    }
+end
+
+-- Theme management
+function lib:SetTheme(newTheme)
+    for key, value in pairs(newTheme) do
+        if LibraryFunctions.Theme[key] then
+            LibraryFunctions.Theme[key] = value
+        end
+    end
+end
+
+function lib:GetTheme()
+    return LibraryFunctions.Theme
+end
+
+-- ============================================
+-- EXAMPLE USAGE
+-- ============================================
+
+--[[
+Example usage:
+
+local Library = loadstring(game:HttpGet("your-library-url"))()
+
+-- Create main window
+local Window = Library:Create("v1.0", nil, Enum.KeyCode.RightShift)
+
+-- Create watermark
+Library:CreateWatermark("My Script")
+
+-- Create tabs
+local MainTab = Window:CreateTab("Main", "rbxassetid://icon-id")
+local SettingsTab = Window:CreateTab("Settings")
+
+-- Create sections
+MainTab:CreateSection("Combat")
+
+-- Create elements
+MainTab:CreateButton({
+    Text = "Click Me",
+    Callback = function()
+        Library:NotifySuccess("Success", "Button clicked!")
+    end
+})
+
+MainTab:CreateToggle({
+    Text = "Enable Feature",
+    Default = false,
+    Flag = "FeatureEnabled",
+    Callback = function(value)
+        print("Toggle:", value)
+    end
+})
+
+MainTab:CreateSlider({
+    Text = "Speed",
+    Min = 0,
+    Max = 100,
+    Default = 50,
+    Increment = 1,
+    Suffix = "%",
+    Flag = "Speed",
+    Callback = function(value)
+        print("Speed:", value)
+    end
+})
+
+MainTab:CreateDropdown({
+    Text = "Select Option",
+    Options = {"Option 1", "Option 2", "Option 
