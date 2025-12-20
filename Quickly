@@ -6627,7 +6627,7 @@ return function(property, bindableEvent)
 				Name = "container",
 				Visible = isVisible.boolean,
 				AnchorPoint = Vector2.new(0.5,0.5),
-				Position = UDim2.new(0.55,0,0.45,get(absoluteOffset.number)),
+				Position = UDim2.new(0.5, 0, 0.5, 0,get(absoluteOffset.number)),
 				Size = animate(function()
 					return UDim2.fromOffset(get(x),get(y))
 				end,30,1),
