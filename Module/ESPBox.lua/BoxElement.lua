@@ -42,7 +42,7 @@ return function(boxTab, ESP)
 		Flag = "MaxDistance",
 		Min = 0,
 		Max = 10000,
-		Default = 36,
+		Default = 360,
 		Callback = function(value)
 			ESP.config.maxDistance = value
 		end
