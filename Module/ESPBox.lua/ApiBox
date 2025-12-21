@@ -8,8 +8,8 @@ local Services = {
 
 local ESP = {
 	config = {
-		enabled = true,
-		box3D = true,
+		enabled = false,
+		box3D = false,
 		boxFilled = false,
 		boxOutline = false,
 		cornerBox = false,
@@ -33,7 +33,7 @@ local ESP = {
 		maxPlayersPerFrame = 10,
 		raycastCacheDuration = 0.1,
 		poolCleanupInterval = 30,
-		enableErrorRecovery = true,
+		enableErrorRecovery = false,
 		debugMode = false
 	},
 	
