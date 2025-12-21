@@ -33,7 +33,7 @@ local ESP = {
 		maxPlayersPerFrame = 10,
 		raycastCacheDuration = 0.1,
 		poolCleanupInterval = 30,
-		enableErrorRecovery = false,
+		enableErrorRecovery = true,
 		debugMode = false
 	},
 	
