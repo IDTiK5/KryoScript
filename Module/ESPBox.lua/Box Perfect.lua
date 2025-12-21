@@ -8,8 +8,8 @@ local Services = {
 
 local ESP = {
 	config = {
-		enabled = true,
-		box3D = true,
+		enabled = false,
+		box3D = false,
 		boxFilled = false,
 		boxOutline = false,
 		cornerBox = false,
