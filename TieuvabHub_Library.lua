@@ -752,6 +752,55 @@ end
 -- Slider
 ---------------------------------------------------------------------------
 
+--[[
+	Slide.lua — Section:CreateSlider (bản nâng cấp)
+
+	Config hỗ trợ:
+		Text        (string)   Tiêu đề thanh trượt
+		Min / Max   (number)   Khoảng giá trị (mặc định 0 / 100)
+		Step        (number)   Bước nhảy (mặc định 1)
+		Default     (number)   Giá trị ban đầu
+		Callback    (function) Gọi mỗi khi giá trị thay đổi
+		Prefix      (string)   [MỚI] Tiền tố hiển thị, ví dụ "$"
+		Suffix      (string)   [MỚI] Hậu tố hiển thị, ví dụ "%", " FPS"
+		AllowInput  (boolean)  [MỚI] Cho phép gõ số trực tiếp (mặc định true)
+		Tooltip     (boolean)  [MỚI] Bong bóng giá trị khi kéo (mặc định true)
+
+	API (giữ nguyên): object:Set(value, silent), object:Get(), object.Instance
+
+	Phụ thuộc có sẵn trong thư viện: Section, newRow, create, addCorner,
+	safeCall, FONT, FONT_BOLD. Slider KHÔNG còn dùng isPress hay
+	window._activeDrag nữa; window:_connect chỉ dùng (nếu có) để dọn kết nối.
+]]
+
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local TextService = game:GetService("TextService")
+
+-- ===== [MỚI] Hằng số hoạt ảnh & kích thước =====
+local TWEEN_CLICK = TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) -- trượt tới vị trí khi nhấp / Set()
+local TWEEN_FAST = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- hover, glow, tooltip
+
+local TRACK_H = 6 -- độ dày Track bình thường
+local TRACK_H_ACTIVE = 8 -- độ dày Track khi hover/kéo
+local KNOB_SIZE = 14
+local KNOB_ACTIVE_SCALE = 1.3 -- Knob phóng to khi hover/kéo
+local TIP_H = 20 -- chiều cao bong bóng giá trị
+local TIP_OFFSET_Y = -16 -- vị trí đáy bong bóng so với tâm Knob
+local TIP_LIFT = 6 -- quãng bong bóng "nổi lên" khi xuất hiện
+
+-- [MỚI] Input tự quản lý: chỉ nhận chuột trái hoặc chạm (không phụ thuộc isPress bên ngoài)
+local function isPointerPress(input)
+	return input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch
+end
+
+-- [MỚI] Chọn màu chữ (đen/trắng) dễ đọc trên nền màu nhấn
+local function contrastColor(color)
+	local luma = 0.299 * color.R + 0.587 * color.G + 0.114 * color.B
+	return luma > 0.6 and Color3.fromRGB(20, 20, 20) or Color3.fromRGB(255, 255, 255)
+end
+
 function Section:CreateSlider(config)
 	config = config or {}
 	local window = self.Window
@@ -767,6 +816,12 @@ function Section:CreateSlider(config)
 		step = 1
 	end
 
+	-- [MỚI] Prefix / Suffix và các tuỳ chọn bật/tắt
+	local prefix = tostring(config.Prefix or "")
+	local suffix = tostring(config.Suffix or "")
+	local allowInput = config.AllowInput ~= false
+	local useTooltip = config.Tooltip ~= false
+
 	local decimals = 0
 	while decimals < 6 do
 		local scaled = step * (10 ^ decimals)
@@ -780,16 +835,36 @@ function Section:CreateSlider(config)
 	local function snap(value)
 		value = math.clamp(value, minValue, maxValue)
 		value = minValue + math.floor((value - minValue) / step + 0.5) * step
-		return math.clamp(value, minValue, maxValue)
+		value = math.clamp(value, minValue, maxValue)
+		-- Làm sạch sai số số thực (0.30000000000000004 -> 0.3)
+		return tonumber(string.format("%.6f", value)) or value
 	end
 
 	local current = snap(tonumber(config.Default) or minValue)
 
+	-- Trạng thái nội bộ
+	local hovered = false -- chuột đang ở trên thanh trượt
+	local dragging = false -- đang kéo
+	local editing = false -- đang gõ số trong ô giá trị
+	local tipVisible = false -- bong bóng đang hiện
+
+	local accent = theme.Accent
+	local tipTextSize = math.max((tonumber(theme.FontSize) or 14) - 1, 11)
+
+	-- Kết nối sự kiện: ưu tiên window:_connect (để window tự dọn khi huỷ)
+	local function connect(signal, handler)
+		if type(window._connect) == "function" then
+			return window:_connect(signal, handler)
+		end
+		return signal:Connect(handler)
+	end
+
+	-- ===== Dựng giao diện =====
 	local row = newRow(self, "Slider", 54)
 	create("TextLabel", {
 		Name = "Label",
 		Position = UDim2.fromOffset(10, 6),
-		Size = UDim2.new(1, -90, 0, 20),
+		Size = UDim2.new(1, -110, 0, 20),
 		BackgroundTransparency = 1,
 		Font = FONT,
 		Text = tostring(config.Text or "Slider"),
@@ -799,47 +874,173 @@ function Section:CreateSlider(config)
 		TextTruncate = Enum.TextTruncate.AtEnd,
 		Parent = row,
 	})
-	local valueLabel = create("TextLabel", {
+
+	-- [MỚI] ValueLabel giờ là TextBox: nhấp vào để gõ số trực tiếp
+	local valueBox = create("TextBox", {
 		Name = "Value",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = UDim2.new(1, -10, 0, 6),
-		Size = UDim2.fromOffset(70, 20),
+		Position = UDim2.new(1, -6, 0, 5),
+		Size = UDim2.fromOffset(84, 22),
+		BackgroundColor3 = theme.Border,
 		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ClearTextOnFocus = false,
+		ClipsDescendants = true,
 		Font = FONT_BOLD,
 		Text = "",
-		TextColor3 = theme.Accent,
+		TextColor3 = accent,
 		TextSize = theme.FontSize,
 		TextXAlignment = Enum.TextXAlignment.Right,
+		TextEditable = allowInput,
 		Parent = row,
+	})
+	addCorner(valueBox, 5)
+	create("UIPadding", {
+		PaddingLeft = UDim.new(0, 4),
+		PaddingRight = UDim.new(0, 4),
+		Parent = valueBox,
+	})
+	local valueStroke = create("UIStroke", {
+		Color = accent,
+		Thickness = 1,
+		Transparency = 1,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = valueBox,
 	})
 
 	local track = create("Frame", {
 		Name = "Track",
-		Position = UDim2.new(0, 10, 0, 38),
-		Size = UDim2.new(1, -20, 0, 6),
+		AnchorPoint = Vector2.new(0, 0.5), -- neo giữa để Track dày lên đều hai phía khi hover
+		Position = UDim2.new(0, 10, 0, 41),
+		Size = UDim2.new(1, -20, 0, TRACK_H),
 		BackgroundColor3 = theme.Border,
 		BorderSizePixel = 0,
 		Parent = row,
 	})
 	addCorner(track, 3)
+
+	-- [MỚI] Fill dùng gradient nhẹ (đậm -> sáng) cho cảm giác có chiều sâu
 	local fill = create("Frame", {
 		Name = "Fill",
 		Size = UDim2.fromScale(0, 1),
-		BackgroundColor3 = theme.Accent,
+		BackgroundColor3 = Color3.fromRGB(255, 255, 255), -- màu thật do UIGradient quyết định
 		BorderSizePixel = 0,
 		Parent = track,
 	})
 	addCorner(fill, 3)
+	create("UIGradient", {
+		Color = ColorSequence.new(
+			accent:Lerp(Color3.fromRGB(0, 0, 0), 0.2),
+			accent:Lerp(Color3.fromRGB(255, 255, 255), 0.15)
+		),
+		Parent = fill,
+	})
+
+	-- [MỚI] KnobHolder: khung rỗng (0x0) di chuyển theo giá trị.
+	-- Glow, Knob và Tooltip là con của nó nên luôn đi cùng nhau, chỉ cần tween 1 Position.
+	local knobHolder = create("Frame", {
+		Name = "KnobHolder",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(0, 0),
+		BackgroundTransparency = 1,
+		Parent = track,
+	})
+
+	-- [MỚI] Hai lớp Glow (vòng sáng) nằm DƯỚI Knob; mặc định ẩn (trong suốt, thu nhỏ)
+	local glowLayers = {}
+	local function makeGlow(size, hoverT, dragT)
+		local frame = create("Frame", {
+			Name = "Glow",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromOffset(0, 0),
+			Size = UDim2.fromOffset(size, size),
+			BackgroundColor3 = accent,
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			ZIndex = 1,
+			Parent = knobHolder,
+		})
+		create("UICorner", { CornerRadius = UDim.new(0.5, 0), Parent = frame })
+		local scale = create("UIScale", { Scale = 0.6, Parent = frame })
+		glowLayers[#glowLayers + 1] = {
+			frame = frame,
+			scale = scale,
+			hoverT = hoverT, -- độ trong suốt khi hover
+			dragT = dragT, -- độ trong suốt khi kéo (đậm hơn)
+		}
+	end
+	makeGlow(40, 0.9, 0.8) -- lớp ngoài, mờ
+	makeGlow(26, 0.78, 0.6) -- lớp trong, đậm hơn
+
 	local knob = create("Frame", {
 		Name = "Knob",
 		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0, 0.5),
-		Size = UDim2.fromOffset(14, 14),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromOffset(KNOB_SIZE, KNOB_SIZE),
 		BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 		BorderSizePixel = 0,
-		Parent = track,
+		ZIndex = 3,
+		Parent = knobHolder,
 	})
-	addCorner(knob, 7)
+	addCorner(knob, KNOB_SIZE / 2)
+	-- UIScale giúp phóng to Knob mà vẫn giữ nguyên hình tròn
+	local knobScale = create("UIScale", { Scale = 1, Parent = knob })
+	local knobStroke = create("UIStroke", {
+		Color = accent,
+		Thickness = 0,
+		Transparency = 0.35,
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Parent = knob,
+	})
+
+	-- [MỚI] Floating Tooltip: bong bóng giá trị nằm trên đỉnh Knob
+	local tipRoot = create("Frame", {
+		Name = "Tooltip",
+		Position = UDim2.fromOffset(0, TIP_OFFSET_Y),
+		Size = UDim2.fromOffset(0, 0),
+		BackgroundTransparency = 1,
+		Visible = false,
+		ZIndex = 10,
+		Parent = knobHolder,
+	})
+	local bubble = create("Frame", {
+		Name = "Bubble",
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromOffset(0, 0),
+		Size = UDim2.fromOffset(40, TIP_H),
+		BackgroundColor3 = accent,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 10,
+		Parent = tipRoot,
+	})
+	addCorner(bubble, 6)
+	local arrow = create("Frame", { -- mũi tên nhỏ chỉ xuống Knob
+		Name = "Arrow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 1, 0),
+		Size = UDim2.fromOffset(8, 8),
+		Rotation = 45,
+		BackgroundColor3 = accent,
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ZIndex = 10,
+		Parent = bubble,
+	})
+	addCorner(arrow, 2)
+	local tipLabel = create("TextLabel", {
+		Name = "Text",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		Font = FONT_BOLD,
+		Text = "",
+		TextColor3 = contrastColor(accent),
+		TextSize = tipTextSize,
+		TextTransparency = 1,
+		ZIndex = 11,
+		Parent = bubble,
+	})
 
 	-- Vùng bắt thao tác rộng hơn thanh trượt để dễ chạm trên điện thoại.
 	local hit = create("TextButton", {
@@ -847,53 +1048,344 @@ function Section:CreateSlider(config)
 		Position = UDim2.fromOffset(0, 28),
 		Size = UDim2.new(1, 0, 0, 26),
 		BackgroundTransparency = 1,
+		AutoButtonColor = false,
 		Text = "",
 		Parent = row,
 	})
 
 	local object = { Instance = row }
 
-	local function render()
-		local alpha = (current - minValue) / (maxValue - minValue)
-		fill.Size = UDim2.fromScale(alpha, 1)
-		knob.Position = UDim2.fromScale(alpha, 0.5)
-		valueLabel.Text = string.format(format, current)
+	-- ===== [MỚI] Tiện ích tween: mỗi Instance chỉ giữ 1 tween, tween mới sẽ huỷ tween cũ =====
+	local tweens = {}
+	local function play(instance, info, props)
+		local old = tweens[instance]
+		if old then
+			old:Cancel()
+		end
+		local tween = TweenService:Create(instance, info, props)
+		tweens[instance] = tween
+		tween:Play()
 	end
-	render()
+	-- Gán thẳng (không hoạt ảnh) và huỷ tween đang chạy để tránh bị ghi đè
+	local function setNow(instance, props)
+		local old = tweens[instance]
+		if old then
+			old:Cancel()
+			tweens[instance] = nil
+		end
+		for key, value in pairs(props) do
+			instance[key] = value
+		end
+	end
 
-	function object:Set(value, silent)
+	-- ===== Hiển thị giá trị =====
+	local function alphaOf(value)
+		return (value - minValue) / (maxValue - minValue)
+	end
+
+	-- [MỚI] Giá trị hiển thị = Prefix .. số .. Suffix
+	local function formatValue(value)
+		return prefix .. string.format(format, value) .. suffix
+	end
+
+	-- Đo chiều rộng chữ của tooltip (có dự phòng nếu GetTextSize lỗi)
+	local function measureText(text)
+		local ok, size = pcall(function()
+			return TextService:GetTextSize(text, tipTextSize, FONT_BOLD, Vector2.new(1000, 100))
+		end)
+		if ok and typeof(size) == "Vector2" then
+			return size.X
+		end
+		return #text * 7
+	end
+
+	-- [MỚI] Cập nhật chữ + kích thước + vị trí bong bóng. Bong bóng được kẹp trong
+	-- mép thanh trượt (tối đa lấn ra 10px) còn mũi tên vẫn chỉ đúng vào Knob.
+	local function updateTooltip(alpha)
+		local text = formatValue(current)
+		tipLabel.Text = text
+		local width = math.max(measureText(text) + 16, 28)
+		bubble.Size = UDim2.fromOffset(width, TIP_H)
+
+		local trackWidth = track.AbsoluteSize.X
+		local halfExtra = width / 2 - 10
+		local offsetX = 0
+		if halfExtra > 0 and trackWidth > halfExtra * 2 then
+			local px = alpha * trackWidth
+			offsetX = math.clamp(px, halfExtra, trackWidth - halfExtra) - px
+		end
+		bubble.Position = UDim2.fromOffset(offsetX, 0)
+		arrow.Position = UDim2.new(0.5, -offsetX, 1, 0)
+	end
+
+	-- animate = true: trượt mượt (nhấp / Set); false: bám sát con trỏ khi kéo
+	local function render(animate)
+		local alpha = alphaOf(current)
+		local fillSize = UDim2.fromScale(alpha, 1)
+		local knobPos = UDim2.fromScale(alpha, 0.5)
+		if animate then
+			play(fill, TWEEN_CLICK, { Size = fillSize })
+			play(knobHolder, TWEEN_CLICK, { Position = knobPos })
+		else
+			setNow(fill, { Size = fillSize })
+			setNow(knobHolder, { Position = knobPos })
+		end
+
+		-- Không ghi đè chữ khi người dùng đang gõ
+		if not editing then
+			valueBox.Text = formatValue(current)
+		end
+		if tipVisible then
+			updateTooltip(alpha)
+		end
+	end
+	render(false)
+
+	-- [MỚI] Hiệu ứng Hover/Dragging: Knob phóng to + Glow + Track dày lên
+	local function applyState()
+		local active = dragging or hovered
+		play(knobScale, TWEEN_FAST, { Scale = active and KNOB_ACTIVE_SCALE or 1 })
+		play(knobStroke, TWEEN_FAST, { Thickness = active and 2.5 or 0 })
+		play(track, TWEEN_FAST, {
+			Size = UDim2.new(1, -20, 0, active and TRACK_H_ACTIVE or TRACK_H),
+		})
+		for _, glow in ipairs(glowLayers) do
+			local transparency = 1
+			if dragging then
+				transparency = glow.dragT
+			elseif hovered then
+				transparency = glow.hoverT
+			end
+			play(glow.frame, TWEEN_FAST, { BackgroundTransparency = transparency })
+			play(glow.scale, TWEEN_FAST, { Scale = active and 1 or 0.6 })
+		end
+	end
+
+	-- [MỚI] Hiện/ẩn bong bóng giá trị (mờ dần + nổi lên nhẹ)
+	local function setTooltip(visible)
+		if not useTooltip or tipVisible == visible then
+			return
+		end
+		tipVisible = visible
+		if visible then
+			tipRoot.Visible = true
+			setNow(tipRoot, { Position = UDim2.fromOffset(0, TIP_OFFSET_Y + TIP_LIFT) })
+			updateTooltip(alphaOf(current))
+			play(tipRoot, TWEEN_FAST, { Position = UDim2.fromOffset(0, TIP_OFFSET_Y) })
+			play(bubble, TWEEN_FAST, { BackgroundTransparency = 0 })
+			play(arrow, TWEEN_FAST, { BackgroundTransparency = 0 })
+			play(tipLabel, TWEEN_FAST, { TextTransparency = 0 })
+		else
+			play(tipRoot, TWEEN_FAST, { Position = UDim2.fromOffset(0, TIP_OFFSET_Y + TIP_LIFT) })
+			play(bubble, TWEEN_FAST, { BackgroundTransparency = 1 })
+			play(arrow, TWEEN_FAST, { BackgroundTransparency = 1 })
+			play(tipLabel, TWEEN_FAST, { TextTransparency = 1 })
+			task.delay(TWEEN_FAST.Time, function()
+				-- Chỉ ẩn hẳn nếu trong lúc chờ người dùng chưa kéo lại
+				if not tipVisible then
+					tipRoot.Visible = false
+				end
+			end)
+		end
+	end
+
+	-- ===== Đặt giá trị (lõi chung cho Set / kéo / gõ số) =====
+	local function setValue(value, silent, animate)
 		local snapped = snap(tonumber(value) or current)
 		if snapped == current then
 			return
 		end
 		current = snapped
-		render()
+		render(animate)
 		if not silent then
 			safeCall(config.Callback, current)
 		end
+	end
+
+	function object:Set(value, silent)
+		-- Đang kéo thì bám sát con trỏ, không tween để tránh trễ
+		setValue(value, silent, not dragging)
 	end
 
 	function object:Get()
 		return current
 	end
 
-	local function updateFromPosition(position)
-		local width = math.max(track.AbsoluteSize.X, 1)
-		local alpha = math.clamp((position.X - track.AbsolutePosition.X) / width, 0, 1)
-		object:Set(minValue + alpha * (maxValue - minValue))
+	-- ===== [MỚI] Nhập số trực tiếp =====
+	-- Chấp nhận "1,5" lẫn "1.5"; bỏ mọi ký tự không phải số (kể cả prefix/suffix người dùng gõ nhầm)
+	local function parseNumber(text)
+		local cleaned = string.gsub(text, ",", ".")
+		cleaned = string.gsub(cleaned, "[^%d%.%-]", "")
+		return tonumber(cleaned)
 	end
 
-	window:_connect(hit.InputBegan, function(input)
-		if not isPress(input) then
+	local valueHover = false -- chuột đang ở trên ô giá trị
+	local function refreshValueBox()
+		local boxT = 1
+		if editing then
+			boxT = 0.35
+		elseif allowInput and valueHover then
+			boxT = 0.6
+		end
+		play(valueBox, TWEEN_FAST, { BackgroundTransparency = boxT })
+		play(valueStroke, TWEEN_FAST, { Transparency = editing and 0.25 or 1 })
+	end
+
+	if allowInput then
+		local invalidChars = minValue < 0 and "[^%d%.,%-]" or "[^%d%.,]"
+
+		connect(valueBox.Focused, function()
+			-- Khi gõ: hiện số thuần (không prefix/suffix) và chọn toàn bộ để ghi đè nhanh
+			valueBox.Text = string.format(format, current)
+			editing = true
+			valueBox.CursorPosition = #valueBox.Text + 1
+			valueBox.SelectionStart = 1
+			refreshValueBox()
+		end)
+
+		-- Chặn ký tự lạ ngay khi gõ
+		connect(valueBox:GetPropertyChangedSignal("Text"), function()
+			if not editing then
+				return
+			end
+			local filtered = string.gsub(valueBox.Text, invalidChars, "")
+			if filtered ~= valueBox.Text then
+				valueBox.Text = filtered
+			end
+		end)
+
+		-- Thoát ô nhập (Enter / bấm ra ngoài): áp dụng giá trị, tự kẹp theo Min/Max/Step
+		connect(valueBox.FocusLost, function()
+			editing = false
+			local typed = parseNumber(valueBox.Text)
+			if typed then
+				setValue(typed, false, true)
+			end
+			valueBox.Text = formatValue(current) -- nhập sai/không đổi thì trả về giá trị hợp lệ
+			refreshValueBox()
+		end)
+
+		connect(valueBox.MouseEnter, function()
+			valueHover = true
+			refreshValueBox()
+		end)
+		connect(valueBox.MouseLeave, function()
+			valueHover = false
+			refreshValueBox()
+		end)
+	end
+
+	-- ===== [MỚI] Kéo thả tự quản lý (PC + điện thoại) =====
+	local dragInput = nil -- InputObject đang kéo (để phân biệt từng ngón khi cảm ứng đa điểm)
+	local dragConns = {} -- kết nối tạm: chỉ tồn tại trong lúc kéo → không tốn tài nguyên khi nhàn rỗi
+	local scrollFrame = nil
+	local scrollWasEnabled = true
+
+	local function updateFromPosition(position, animate)
+		local width = math.max(track.AbsoluteSize.X, 1)
+		local alpha = math.clamp((position.X - track.AbsolutePosition.X) / width, 0, 1)
+		setValue(minValue + alpha * (maxValue - minValue), false, animate)
+	end
+
+	local function stopDrag()
+		if not dragging then
 			return
 		end
-		updateFromPosition(input.Position)
-		window._activeDrag = function(moved)
-			updateFromPosition(moved.Position)
+		dragging = false
+		for _, conn in ipairs(dragConns) do
+			conn:Disconnect()
+		end
+		table.clear(dragConns)
+
+		-- Trả lại khả năng cuộn của khung chứa
+		if scrollFrame then
+			scrollFrame.ScrollingEnabled = scrollWasEnabled
+			scrollFrame = nil
+		end
+
+		-- Cảm ứng không có "hover": thả tay là về trạng thái thường
+		if dragInput and dragInput.UserInputType == Enum.UserInputType.Touch then
+			hovered = false
+		end
+		dragInput = nil
+
+		setTooltip(false)
+		applyState()
+	end
+
+	local function startDrag(input)
+		if dragging then
+			return
+		end
+		-- Đang gõ số mà nhấp vào thanh trượt thì chốt giá trị đang gõ trước
+		if valueBox:IsFocused() then
+			valueBox:ReleaseFocus()
+		end
+
+		dragging = true
+		dragInput = input
+		local isMouse = input.UserInputType == Enum.UserInputType.MouseButton1
+
+		-- Khóa cuộn của ScrollingFrame cha để kéo ngang trên điện thoại không bị cuộn trang
+		scrollFrame = row:FindFirstAncestorWhichIsA("ScrollingFrame")
+		if scrollFrame then
+			scrollWasEnabled = scrollFrame.ScrollingEnabled
+			scrollFrame.ScrollingEnabled = false
+		end
+
+		-- Nhấp vào Track: Knob trượt mượt tới vị trí bằng Tween
+		updateFromPosition(input.Position, true)
+		setTooltip(true)
+		applyState()
+
+		-- InputChanged: chuột thì theo MouseMovement, cảm ứng thì theo đúng ngón đã chạm
+		dragConns[#dragConns + 1] = UserInputService.InputChanged:Connect(function(changed)
+			if isMouse then
+				if changed.UserInputType == Enum.UserInputType.MouseMovement then
+					updateFromPosition(changed.Position, false)
+				end
+			elseif changed == input then
+				updateFromPosition(changed.Position, false)
+			end
+		end)
+
+		-- InputEnded: thả chuột trái / nhấc đúng ngón tay đang kéo (kể cả thả ngoài thanh trượt)
+		dragConns[#dragConns + 1] = UserInputService.InputEnded:Connect(function(ended)
+			if ended == input or (isMouse and ended.UserInputType == Enum.UserInputType.MouseButton1) then
+				stopDrag()
+			end
+		end)
+	end
+
+	-- InputBegan: bắt đầu kéo khi chuột trái / chạm vào vùng Hit
+	connect(hit.InputBegan, function(input)
+		if isPointerPress(input) then
+			startDrag(input)
 		end
 	end)
+
+	-- Hover (chỉ có ở chuột)
+	connect(hit.MouseEnter, function()
+		hovered = true
+		applyState()
+	end)
+	connect(hit.MouseLeave, function()
+		hovered = false
+		applyState()
+	end)
+
+	-- Dọn dẹp nếu hàng bị huỷ giữa lúc đang kéo
+	row.Destroying:Connect(function()
+		stopDrag()
+		for _, tween in pairs(tweens) do
+			tween:Cancel()
+		end
+		table.clear(tweens)
+	end)
+
 	return object
 end
+
 
 ---------------------------------------------------------------------------
 -- Dropdown
