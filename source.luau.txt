@@ -7094,22 +7094,24 @@ function Compkiller.new(Config : Window)
 	table.insert(Compkiller.__WindowObjects , WindowArgs);
 	Compkiller.__WindowJanitors[CompKiller] = WindowArgs.Janitor;
 
-	MainFrame.Active = true;
-	MainFrame.Name = Compkiller:_RandomString()
-	MainFrame.Parent = CompKiller
-	MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-	MainFrame.BackgroundColor3 = Compkiller.Colors.BGDBColor
+	MainFrame.Active = true
+MainFrame.Name = Compkiller:_RandomString()
+MainFrame.Parent = CompKiller
 
-	table.insert(Compkiller.Elements.BGDBColor,{
-		Element = MainFrame,
-		Property = 'BackgroundColor3'
-	});
+-- Căn chỉnh vị trí cửa sổ
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 100, 0.5, 50)
 
-	MainFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	MainFrame.BorderSizePixel = 0
-	MainFrame.Position = UDim2.fromScale(0.5,0.5);
-	MainFrame.Size = Compkiller.Scale.Window
-	MainFrame.ZIndex = 4
+MainFrame.BackgroundColor3 = Compkiller.Colors.BGDBColor
+
+table.insert(Compkiller.Elements.BGDBColor, {
+    Element = MainFrame,
+    Property = 'BackgroundColor3'
+})
+
+MainFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BorderSizePixel = 0
+MainFrame.ZIndex = 4
 
 	MainFrame:GetPropertyChangedSignal('BackgroundTransparency'):Connect(function()
 		if MainFrame.BackgroundTransparency > 0.9 then
