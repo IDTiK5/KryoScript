@@ -10330,7 +10330,7 @@ MainFrame.ZIndex = 4
 
 			Watermark.Name = Compkiller:_RandomString()
 Watermark.Parent = CompKiller
-Watermark.AnchorPoint = Vector2.new(1, 0)
+Watermark.Position = UDim2.new(0.5, 0, 0, 10)
 Watermark.BackgroundColor3 = Compkiller.Colors.BGDBColor
 
 -- Cho phép kéo Watermark bằng chuột hoặc cảm ứng
@@ -10346,7 +10346,7 @@ Watermark.BorderColor3 = Color3.fromRGB(0, 0, 0)
 Watermark.BorderSizePixel = 0
 
 -- Giữ Watermark ở góc trên bên phải
-Watermark.Position = UDim2.new(1, -10, 0, 10)
+Watermark.Position = UDim2.new(0.5, 0, 0, 10)
 
 Watermark.Size = UDim2.new(0, 45, 0, 23)
 Watermark.ZIndex = 150
