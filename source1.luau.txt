@@ -4700,35 +4700,74 @@ function Compkiller:_LoadOption(Value , TabSignal)
 		end;
 
 		local Hold = function()
-			local scale = Update()
+    local scale = Update()
 
-			if not Helper.Text.Visible then
-				Helper.Text.Position = UDim2.fromOffset(Button.AbsolutePosition.X,Button.AbsolutePosition.Y + (45))
-			end;
+    if not Helper.Text.Visible then
+        Helper.Text.Position = UDim2.fromOffset(
+            Button.AbsolutePosition.X,
+            Button.AbsolutePosition.Y + 45
+        )
+    end
 
-			Compkiller:_Animation(Helper.Text,TweenInfo.new(0.15),{
-				TextTransparency = 0.35,
-				BackgroundTransparency = 0,
-				Position = UDim2.fromOffset(Button.AbsolutePosition.X,Button.AbsolutePosition.Y + (40 - (scale.Y / 2)))
-			});
+    Compkiller:_Animation(Helper.Text, TweenInfo.new(0.15), {
+        TextTransparency = 0.35,
+        BackgroundTransparency = 0,
+        Position = UDim2.fromOffset(
+            Button.AbsolutePosition.X,
+            Button.AbsolutePosition.Y + (40 - (scale.Y / 2))
+        )
+    })
 
-			Compkiller:_Animation(Helper.UIStroke,TweenInfo.new(0.15),{
-				Transparency = 0
-			});
+    Compkiller:_Animation(Helper.UIStroke, TweenInfo.new(0.15), {
+        Transparency = 0
+    })
+end
 
-		end;
+-- Lấy dịch vụ xử lý thao tác chuột và cảm ứng
+local UserInputService = game:GetService("UserInputService")
 
-		Compkiller:_Hover(Button,  Hold, Release);
+-- PC: Hiện khi rê chuột, ẩn khi rời chuột
+if UserInputService.MouseEnabled then
+    Button.MouseEnter:Connect(Hold)
+    Button.MouseLeave:Connect(Release)
+end
 
-		Release();
+-- Điện thoại: Giữ Helper cho đến khi nhấc ngón tay
+Button.InputBegan:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
 
-		local Args = {};
+    Hold()
 
-		function Args:SetValue(value)
-			Config.Text = value;
-		end;
+    local TouchInput = input
+    local Connection
 
-		return Args;
+    Connection = UserInputService.InputEnded:Connect(function(endedInput)
+        if endedInput == TouchInput then
+            Release()
+
+            if Connection then
+                Connection:Disconnect()
+                Connection = nil
+            end
+        end
+    end)
+end)
+
+-- Ẩn Helper khi khởi tạo
+Release()
+
+local Args = {}
+
+function Args:SetValue(value)
+    Config.Text = value
+end
+
+return Args
+	end;
+
+	function Args:AddColorPicker(Config: MiniColorPicker)
 	end;
 
 	function Args:AddColorPicker(Config: MiniColorPicker)
