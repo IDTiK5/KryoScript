@@ -10329,26 +10329,30 @@ MainFrame.ZIndex = 4
 			local UIListLayout = Instance.new("UIListLayout")
 
 			Watermark.Name = Compkiller:_RandomString()
-			Watermark.Parent = CompKiller
-			Watermark.AnchorPoint = Vector2.new(1, 0)
-			Watermark.BackgroundColor3 = Compkiller.Colors.BGDBColor
+Watermark.Parent = CompKiller
+Watermark.AnchorPoint = Vector2.new(1, 0)
+Watermark.BackgroundColor3 = Compkiller.Colors.BGDBColor
 
-			Compkiller:Drag(Watermark , Watermark, 0.1);
+-- Cho phép kéo Watermark bằng chuột hoặc cảm ứng
+Compkiller:Drag(Watermark, Watermark, 0.1)
 
-			table.insert(Compkiller.Elements.BGDBColor,{
-				Element = Watermark,
-				Property = 'BackgroundColor3'
-			});
+table.insert(Compkiller.Elements.BGDBColor, {
+    Element = Watermark,
+    Property = 'BackgroundColor3'
+})
 
-			Watermark.BackgroundTransparency = 0.025
-			Watermark.BorderColor3 = Color3.fromRGB(0, 0, 0)
-			Watermark.BorderSizePixel = 0
-			Watermark.Position = UDim2.new(1, -10, 0, 10)
-			Watermark.Size = UDim2.new(0, 45, 0, 23)
-			Watermark.ZIndex = 150
+Watermark.BackgroundTransparency = 0.025
+Watermark.BorderColor3 = Color3.fromRGB(0, 0, 0)
+Watermark.BorderSizePixel = 0
 
-			UICorner.CornerRadius = UDim.new(0, 3)
-			UICorner.Parent = Watermark
+-- Giữ Watermark ở góc trên bên phải
+Watermark.Position = UDim2.new(1, -10, 0, 10)
+
+Watermark.Size = UDim2.new(0, 45, 0, 23)
+Watermark.ZIndex = 150
+
+UICorner.CornerRadius = UDim.new(0, 3)
+UICorner.Parent = Watermark
 
 			Logo.Name = Compkiller:_RandomString()
 			Logo.Parent = Watermark
