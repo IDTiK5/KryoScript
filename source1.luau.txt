@@ -7100,7 +7100,7 @@ MainFrame.Parent = CompKiller
 
 -- Căn chỉnh vị trí cửa sổ
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Position = UDim2.new(0.5, 100, 0.5, 50)
+MainFrame.Position = UDim2.new(0.5, 100, 0.5, -50)
 
 MainFrame.BackgroundColor3 = Compkiller.Colors.BGDBColor
 
